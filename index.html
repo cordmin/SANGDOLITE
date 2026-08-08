@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>생활기록부 작성 도우미</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M22 10v6M2 10l10-5 10 5-10 5z'/><path d='M6 12v5c3 3 9 3 12 0v-5'/></svg>">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z'/><path d='m15 5 4 4'/></svg>">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
@@ -76,7 +76,7 @@
     <aside class="w-full md:w-[220px] bg-[#0f172a] text-[#f8fafc] p-4 flex flex-col gap-5 shrink-0 shadow-lg border-r border-slate-800">
         <div class="text-center mt-[6px] flex flex-col items-center gap-1.5">
             <div class="w-11 h-11 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 mb-1 shadow-inner">
-                <i data-lucide="graduation-cap" class="w-6 h-6"></i>
+                <i data-lucide="pencil" class="w-6 h-6"></i>
             </div>
             <h1 class="text-lg font-black tracking-wide leading-snug text-center">생활기록부 작성 도우미</h1>
             <p class="text-xs font-normal opacity-60 text-center tracking-wider">LEE KYUNG MIN</p>
@@ -85,25 +85,20 @@
         <div class="flex flex-col gap-[14px] mt-[20px]">
             <div class="flex flex-col gap-[14px]">
                 <div class="grid grid-cols-2 gap-2">
-                    <button class="sidebar-area-btn active-main px-2 py-[8.5px] rounded-xl text-[14px] area-btn flex items-center justify-center gap-1.5 text-center" onclick="selArea('자율', this)">
-                        <i data-lucide="user-check" class="w-4 h-4 shrink-0"></i>
+                    <button class="sidebar-area-btn active-main px-2 py-[8.5px] rounded-xl text-[14px] area-btn flex items-center justify-center text-center" onclick="selArea('자율', this)">
                         <span>자율 활동</span>
                     </button>
-                    <button class="sidebar-area-btn px-2 py-[8.5px] rounded-xl text-[14px] area-btn flex items-center justify-center gap-1.5 text-center" onclick="selArea('진로', this)">
-                        <i data-lucide="compass" class="w-4 h-4 shrink-0"></i>
+                    <button class="sidebar-area-btn px-2 py-[8.5px] rounded-xl text-[14px] area-btn flex items-center justify-center text-center" onclick="selArea('진로', this)">
                         <span>진로 활동</span>
                     </button>
                 </div>
-                <button class="sidebar-area-btn px-3 py-[8.5px] rounded-xl text-[14px] area-btn flex items-center justify-center gap-2 text-center" onclick="selArea('동아리', this)">
-                    <i data-lucide="users" class="w-4 h-4 shrink-0"></i>
+                <button class="sidebar-area-btn px-3 py-[8.5px] rounded-xl text-[14px] area-btn flex items-center justify-center text-center" onclick="selArea('동아리', this)">
                     <span>스포츠 / 동아리 활동</span>
                 </button>
-                <button class="sidebar-area-btn px-3 py-[8.5px] rounded-xl text-[14px] area-btn flex items-center justify-center gap-2 text-center" onclick="selArea('과세특', this)">
-                    <i data-lucide="book-open" class="w-4 h-4 shrink-0"></i>
+                <button class="sidebar-area-btn px-3 py-[8.5px] rounded-xl text-[14px] area-btn flex items-center justify-center text-center" onclick="selArea('과세특', this)">
                     <span>과목별 세부 특기사항</span>
                 </button>
-                <button class="sidebar-area-btn px-3 py-[8.5px] rounded-xl text-[14px] area-btn flex items-center justify-center gap-2 text-center" onclick="selArea('행동특성', this)">
-                    <i data-lucide="message-square" class="w-4 h-4 shrink-0"></i>
+                <button class="sidebar-area-btn px-3 py-[8.5px] rounded-xl text-[14px] area-btn flex items-center justify-center text-center" onclick="selArea('행동특성', this)">
                     <span>행동특성 및 종합의견</span>
                 </button>
             </div>
