@@ -1,0 +1,5 @@
+# API 키 및 보안 파일 제외
+API키*.txt
+code.gs
+.env
+*.key

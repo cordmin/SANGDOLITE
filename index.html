@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>생활기록부 작성 도우미</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M22 10v6M2 10l10-5 10 5-10 5z'/><path d='M6 12v5c3 3 9 3 12 0v-5'/></svg>">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    
+    <style>
+        body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; }
+        
+        .sidebar-area-btn { transition: all 0.2s; border: 1px solid #334155; background-color: #1e293b; color: #94a3b8; text-align: left; width: 100%; font-weight: 700; }
+        .sidebar-area-btn:hover { background-color: #334155; color: #ffffff; }
+        .sidebar-area-btn.active-main { background-color: #2563eb !important; color: #ffffff !important; border-color: #2563eb !important; font-weight: 700; shadow: 0 2px 8px rgba(37,99,235,0.4); }
+        
+        .chip-btn { transition: all 0.2s; border: 1px solid #cbd5e1; background-color: #ffffff; color: #475569; cursor: pointer; font-weight: 700; }
+        .chip-btn.active-main { background-color: #334155 !important; color: #ffffff !important; border-color: #334155 !important; font-weight: 700; }
+        .chip-btn.active-pos { background-color: #16a34a !important; color: #ffffff !important; border-color: #16a34a !important; font-weight: 700; }
+        .chip-btn.active-neg { background-color: #dc2626 !important; color: #ffffff !important; border-color: #dc2626 !important; font-weight: 700; }
+        
+        .hidden-element { display: none !important; }
+        details > summary { list-style: none; }
+        details > summary::-webkit-details-marker { display: none; }
+        
+        .form-section { counter-reset: step-counter; }
+        .step-group:not(.hidden-element) .step-label::before {
+            counter-increment: step-counter;
+            content: counter(step-counter) ". ";
+            color: #000000;
+            font-weight: 800;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        #student-count::-webkit-inner-spin-button, #student-count::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        #student-count { -moz-appearance: textfield; }
+
+        #selected-autonomy-badges:empty { align-content: center; justify-content: center; }
+        #selected-autonomy-badges:empty::before { content: '활동 카드(수정 가능)를 선택하시거나 직접 입력 후 추가하세요'; color: #475569; font-size: 13px; font-weight: 500; text-align: center; width: 100%; }
+
+        .excel-table { width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; background: white; }
+        .excel-table th { background-color: #f1f5f9; color: #334155; font-weight: 700; font-size: 13px; padding: 6px 16px; border-right: 1px solid #94a3b8; border-bottom: 1px solid #94a3b8; position: sticky; top: 0; z-index: 10; text-align: center; }
+        .excel-table td { padding: 12px 16px; border-right: 1px solid #94a3b8; border-bottom: 1px solid #94a3b8; color: #334155; line-height: 1.6; font-size: 15px; text-align: left; }
+        .excel-table th:last-child, .excel-table td:last-child { border-right: none; }
+        .excel-table tr:last-child td { border-bottom: none; }
+        .kw-chip { min-width: 76px; }
+        .kw-pos, .kw-neg { background-color: #ffffff !important; border-color: #e2e8f0 !important; color: #334155 !important; }
+        .chip-btn.active-pos, .chip-btn.active-neg { color: #ffffff !important; }
+        .excel-num { width: 44px; text-align: center !important; font-weight: 600; background-color: #f1f5f9; white-space: nowrap; }
+        .result-head-table th { border-bottom: none; }
+        .result-cell { background-color: #ffffff; }
+    </style>
+</head>
+<body class="min-h-screen md:h-screen md:overflow-hidden bg-[#0f172a] text-[#1e293b] flex flex-col md:flex-row">
+
+    <!-- 알림 모달 -->
+    <div id="custom-modal" class="hidden-element fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex justify-center items-center z-50 transition-opacity">
+        <div class="bg-white rounded-2xl p-7 w-[400px] shadow-2xl border border-slate-100 flex flex-col items-center text-center">
+            <div id="modal-icon" class="text-4xl mb-4">🔔</div>
+            <h3 id="modal-title" class="text-[18px] font-bold text-slate-800 mb-2">알림</h3>
+            <p id="modal-desc" class="text-[15px] text-slate-600 mb-6 leading-relaxed"></p>
+            <button onclick="closeModal()" class="w-full bg-slate-800 hover:bg-slate-700 text-white py-3 rounded-xl font-bold transition-colors">확인</button>
+        </div>
+    </div>
+
+    <!-- 1. 가장 좌측 사이드바 -->
+    <aside class="w-full md:w-[220px] bg-[#0f172a] text-[#f8fafc] p-4 flex flex-col gap-5 shrink-0 shadow-lg border-r border-slate-800">
+        <div class="text-center mt-[6px] flex flex-col items-center gap-1.5">
+            <div class="w-11 h-11 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 mb-1 shadow-inner">
+                <i data-lucide="graduation-cap" class="w-6 h-6"></i>
+            </div>
+            <h1 class="text-lg font-black tracking-wide leading-snug text-center">생활기록부 작성 도우미</h1>
+            <p class="text-xs font-normal opacity-60 text-center tracking-wider">LEE KYUNG MIN</p>
+        </div>
+
+        <div class="flex flex-col gap-[14px] mt-[20px]">
+            <div class="flex flex-col gap-[14px]">
+                <div class="grid grid-cols-2 gap-2">
+                    <button class="sidebar-area-btn active-main px-2 py-[8.5px] rounded-xl text-[14px] area-btn flex items-center justify-center gap-1.5 text-center" onclick="selArea('자율', this)">
+                        <i data-lucide="user-check" class="w-4 h-4 shrink-0"></i>
+                        <span>자율 활동</span>
+                    </button>
+                    <button class="sidebar-area-btn px-2 py-[8.5px] rounded-xl text-[14px] area-btn flex items-center justify-center gap-1.5 text-center" onclick="selArea('진로', this)">
+                        <i data-lucide="compass" class="w-4 h-4 shrink-0"></i>
+                        <span>진로 활동</span>
+                    </button>
+                </div>
+                <button class="sidebar-area-btn px-3 py-[8.5px] rounded-xl text-[14px] area-btn flex items-center justify-center gap-2 text-center" onclick="selArea('동아리', this)">
+                    <i data-lucide="users" class="w-4 h-4 shrink-0"></i>
+                    <span>스포츠 / 동아리 활동</span>
+                </button>
+                <button class="sidebar-area-btn px-3 py-[8.5px] rounded-xl text-[14px] area-btn flex items-center justify-center gap-2 text-center" onclick="selArea('과세특', this)">
+                    <i data-lucide="book-open" class="w-4 h-4 shrink-0"></i>
+                    <span>과목별 세부 특기사항</span>
+                </button>
+                <button class="sidebar-area-btn px-3 py-[8.5px] rounded-xl text-[14px] area-btn flex items-center justify-center gap-2 text-center" onclick="selArea('행동특성', this)">
+                    <i data-lucide="message-square" class="w-4 h-4 shrink-0"></i>
+                    <span>행동특성 및 종합의견</span>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- 2. 가운데 영역 (입력 및 생성) -->
+    <main class="flex-1 md:flex-none md:w-[640px] py-6 pl-[19px] pr-[7px] flex flex-col min-h-0">
+        <section class="w-full h-full bg-white p-[17px] rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between gap-6 form-section flex-1 min-h-0 overflow-hidden">
+
+            <div class="flex flex-col gap-6 flex-1 min-h-0">
+                <div id="student-count-group" class="step-group">
+                    <label class="block text-[15px] text-[#000000] font-bold mb-3 step-label">문장 생성 옵션</label>
+                    <div class="rounded-xl border border-slate-400 bg-white p-4 flex flex-wrap items-end gap-5">
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-[13px] font-bold text-slate-700">생성 글자 바이트</label>
+                            <select id="char-select" onchange="selChar(parseInt(this.value))" class="w-[190px] h-[38px] px-3 border border-slate-400 rounded-lg text-sm bg-white focus:outline-none focus:border-[#334155] font-bold cursor-pointer">
+                                <option value="125">125자 (약 375byte)</option>
+                                <option value="250">250자 (약 750byte)</option>
+                                <option value="500">500자 (약 1500byte)</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-[13px] font-bold text-slate-700">생성 문장 개수</label>
+                            <div class="flex items-center gap-2">
+                                <input type="number" id="student-count" value="1" min="1" max="50" class="w-24 h-[38px] px-4 border border-slate-400 rounded-lg text-sm focus:outline-none focus:border-[#334155] text-center font-bold">
+                                <span class="text-sm text-slate-500">개</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="dynamic-input-group" class="hidden-element step-group pb-5">
+                    <label id="dynamic-label" class="block text-[15px] text-[#000000] font-bold mb-3 step-label">과목명</label>
+                    <input type="text" id="subj-inp" class="w-full px-4 py-2 border border-slate-400 rounded-lg text-sm bg-white focus:outline-none focus:border-[#334155]">
+                </div>
+             
+                <div id="keyword-section" class="hidden-element step-group">
+                    <label class="block text-[15px] text-[#000000] font-bold mb-3 step-label">생활 태도를 선택하세요 (선택)</label>
+                    <div class="flex items-center gap-4">
+                        <div id="keyword-pos-box" class="flex-1 flex flex-col gap-2 bg-green-100 border border-slate-400 rounded-xl px-2 py-2"></div>
+                        <span class="shrink-0 font-black text-slate-400 text-lg tracking-tight">VS</span>
+                        <div id="keyword-neg-box" class="flex-1 flex flex-col gap-2 bg-red-100 border border-slate-400 rounded-xl px-2 py-2"></div>
+                    </div>
+                </div>
+
+                <div id="autonomy-badge-section" class="hidden-element step-group flex-1 flex flex-col gap-4 min-h-0 overflow-hidden">
+                    <label id="autonomy-label" class="block text-[15px] font-bold text-[#000000] step-label shrink-0">자율활동 내용 선택</label>
+
+                    <div class="shrink-0 border border-slate-400 rounded-xl p-4 bg-white flex flex-col gap-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div class="flex items-center gap-2 max-w-[260px]">
+                                <input type="text" id="custom-autonomy-input" placeholder="직접 입력" class="flex-1 px-3 py-1.5 border border-slate-400 rounded-lg text-xs text-center bg-white focus:outline-none focus:border-[#334155]" onkeypress="if(event.key==='Enter') addCustomAutonomyBadge()">
+                                <button onclick="addCustomAutonomyBadge()" class="bg-[#334155] text-white px-3.5 py-1.5 rounded-lg text-xs font-bold hover:bg-[#253141] transition-all shrink-0">+ 추가</button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-5 gap-2 w-full pt-1" id="preset-group-container"></div>
+                    </div>
+
+                    <div class="bg-slate-100 p-3 rounded-xl border border-slate-400 flex-1 min-h-[140px]">
+                        <div id="selected-autonomy-badges" class="flex flex-wrap content-start gap-1.5 h-full overflow-y-auto custom-scrollbar pr-1"></div>
+                    </div>
+                </div>
+
+                <div id="case-group" class="step-group flex-1 flex flex-col">
+                    <label id="case-label" class="block text-[15px] font-bold mb-3 text-[#000000] step-label">학생 관찰 기록</label>
+                    <textarea id="case-inp" class="w-full flex-1 min-h-[160px] px-4 py-3 border border-slate-400 rounded-lg text-[15px] leading-relaxed focus:outline-none focus:border-[#334155] placeholder:text-sm resize-none"></textarea>
+                </div>
+            </div>
+
+            </div>
+        </section>
+    </main>
+
+    <!-- 3. 오른쪽 영역 (생성 결과 및 보관함) -->
+    <section class="flex-1 py-6 pr-[19px] pl-[7px] flex flex-col gap-6 min-h-0">
+        
+        <div class="bg-white p-[17px] rounded-2xl shadow-sm border border-slate-200 flex flex-col flex-1 min-h-0">
+            <div class="flex justify-between items-center shrink-0">
+                <h2 class="text-[15px] font-bold text-[#000000] leading-none h-[34px] inline-flex items-center">3. 생성 결과</h2>
+                <div class="flex gap-2 items-center -translate-y-[5px]">
+                    <button onclick="runAI()" id="run-btn" class="bg-[#334155] text-[#FFFFFF] px-4 h-[30px] inline-flex items-center rounded-xl text-sm font-bold leading-none shadow-sm hover:bg-[#253141] transition-all">✨ AI 문장 생성하기</button>
+                    <button id="btn-export-result" onclick="exportExcel('result-table', '생기부_' + area + '_AI결과')" class="bg-[#059669] text-white px-4 h-[30px] inline-flex items-center rounded-xl text-sm font-bold leading-none hover:bg-[#03593E] transition-colors shadow-sm">전체 다운로드</button>
+                </div>
+            </div>
+
+            <div id="loading-container" class="hidden-element flex flex-col gap-2 pb-4">
+                <div class="flex justify-between items-center px-1">
+                    <span id="loading-msg" class="text-[14px] font-bold text-blue-600">🔍 학생의 특성을 분석하는 중...</span>
+                    <span id="loading-percent" class="text-[13px] font-bold text-slate-500">0%</span>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden shadow-inner">
+                    <div id="loading-bar" class="bg-gradient-to-r from-blue-500 to-indigo-600 h-3 rounded-full relative" style="width: 0%; transition: width 0.4s ease-out;">
+                        <div class="absolute top-0 left-0 right-0 bottom-0 bg-white/20" style="animation: shimmer 1.5s infinite; transform: skewX(-20deg);"></div>
+                    </div>
+                </div>
+                <style>
+                    @keyframes shimmer { 0% { transform: translateX(-100%) skewX(-20deg); } 100% { transform: translateX(200%) skewX(-20deg); } }
+                </style>
+            </div>
+            
+            <div class="flex-1 flex flex-col min-h-0 mt-[2px] border border-slate-400 overflow-hidden">
+              <div class="shrink-0 custom-scrollbar" style="overflow-y: hidden; scrollbar-gutter: stable; background-color: #f1f5f9; border-bottom: 1px solid #94a3b8;">
+                <table class="excel-table result-head-table" style="width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0;">
+                  <colgroup><col style="width: 44px;"><col></colgroup>
+                  <thead>
+                    <tr>
+                      <th class="excel-num">순</th>
+                      <th>특기사항</th>
+                    </tr>
+                  </thead>
+                </table>
+              </div>
+              <div class="flex-1 overflow-y-auto custom-scrollbar" style="scrollbar-gutter: stable; background-color: #f1f5f9;">
+                <table id="result-table" class="excel-table" style="width: 100%; height: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; background: transparent;">
+                  <colgroup><col style="width: 44px;"><col></colgroup>
+                  <tbody id="result-tbody">
+                  <tr class="filler-row" style="height: 100%;">
+                    <td class="excel-num"></td>
+                    <td></td>
+                  </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+        </div>
+
+    </section>
+
+    <script>
+        // Google Apps Script 웹 앱 배포 URL을 입력하세요.
+        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyULttIY_4Lrtsh50cI2LFtTeSlaiZ81U06SH5jyxn0-6d0s-KzUswl13VVxADWigcu/exec";
+
+        const keywordDB = {
+            '행동특성': { 
+                pos: {
+                    '학교생활': ['규칙준수', '근면성실', '책임감'],
+                    '교우관계': ['친화력', '배려심', '리더십'],
+                    '인성태도': ['차분함', '인내심', '겸손함']
+                },
+                neg: {
+                    '학교생활': ['무질서', '비성실', '잦은지각'],
+                    '교우관계': ['소극적', '이기적', '수동적'],
+                    '인성태도': ['예민함', '끈기부족', '고집센']
+                }
+            }
+        };
+
+        let area = '자율';
+        let charLimit = 125; 
+        const selectedKeywords = new Set();
+        let rawGeneratedText = ""; 
+
+        let tabStates = {
+            '자율': { case: '', subj: '', stu: '', resultHtml: '', resultText: '' },
+            '동아리': { case: '', subj: '', stu: '', resultHtml: '', resultText: '' },
+            '진로': { case: '', subj: '', stu: '', resultHtml: '', resultText: '' },
+            '과세특': { case: '', subj: '', stu: '', resultHtml: '', resultText: '' },
+            '행동특성': { case: '', subj: '', stu: '', resultHtml: '', resultText: '' }
+        };
+
+        let behaviorStorage = JSON.parse(localStorage.getItem('smart_record_behavior_2026')) || [];
+
+        let selectedAutonomyBadges = [];
+
+        const presetsByArea = {
+            '자율': [
+                '정부반장선거', '학급자치활동', '학교폭력예방교육', '장애인식개선교육', '체육한마당',
+                '흡연예방교육', '사이버폭력예방교육', '약물오남용예방교육', '생명존중교육', '다문화이해교육'
+            ],
+            '진로': [
+                '진로심리검사', '진로적성검사', '직업인초청강연', '직업인과의만남', '전공학과체험',
+                '진로융합체험', '현장직업체험', '진로체험의날', '나의꿈발표대회', '진로독서활동'
+            ]
+        };
+
+        window.onload = function() { 
+            lucide.createIcons();
+            renderAutonomyPresets();
+            renderSelectedAutonomyBadges();
+            selArea('자율', document.querySelector('.area-btn')); 
+        };
+
+        function renderAutonomyPresets() {
+            const container = document.getElementById('preset-group-container');
+            if (!container) return;
+            container.innerHTML = '';
+            (presetsByArea[area] || []).forEach(text => {
+                const btn = document.createElement('button');
+                const isSelected = selectedAutonomyBadges.some(b => b.text === text);
+                btn.className = `w-full py-1.5 px-1 text-center rounded-lg text-[11px] font-bold transition-all border shrink-0 truncate ${isSelected ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'}`;
+                btn.innerText = text;
+                btn.onclick = () => togglePresetAutonomyBadge(text);
+                container.appendChild(btn);
+            });
+        }
+
+        function togglePresetAutonomyBadge(text) {
+            const existingIndex = selectedAutonomyBadges.findIndex(b => b.text === text);
+            if (existingIndex > -1) {
+                selectedAutonomyBadges.splice(existingIndex, 1);
+            } else {
+                selectedAutonomyBadges.push({ id: Date.now() + Math.random(), text: text });
+            }
+            renderSelectedAutonomyBadges();
+            renderAutonomyPresets();
+        }
+
+        function addCustomAutonomyBadge() {
+            const input = document.getElementById('custom-autonomy-input');
+            const val = input.value.trim();
+            if (!val) return;
+            selectedAutonomyBadges.push({ id: Date.now() + Math.random(), text: val });
+            input.value = '';
+            renderSelectedAutonomyBadges();
+            renderAutonomyPresets();
+        }
+
+        function updateAutonomyBadgeText(id, newText) {
+            const badge = selectedAutonomyBadges.find(b => b.id === id);
+            if (badge) {
+                badge.text = newText.trim() || '자율활동';
+            }
+            renderAutonomyPresets();
+        }
+
+        function removeAutonomyBadge(id) {
+            selectedAutonomyBadges = selectedAutonomyBadges.filter(b => b.id !== id);
+            renderSelectedAutonomyBadges();
+            renderAutonomyPresets();
+        }
+
+        function renderSelectedAutonomyBadges() {
+            const container = document.getElementById('selected-autonomy-badges');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (selectedAutonomyBadges.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            selectedAutonomyBadges.forEach(b => {
+                const chip = document.createElement('div');
+                chip.className = "relative inline-block";
+                chip.style.marginRight = "6px";
+                chip.style.marginTop = "4px";
+
+                const textBox = document.createElement('span');
+                textBox.className = "inline-block px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-[11px] font-bold text-slate-800 cursor-text";
+                textBox.contentEditable = "true";
+                textBox.spellcheck = false;
+                textBox.innerText = b.text;
+                textBox.onblur = (e) => updateAutonomyBadgeText(b.id, e.target.innerText.trim());
+
+                const closeBtn = document.createElement('button');
+                closeBtn.className = "absolute -top-0.5 -right-1.5 w-3 h-3 rounded-full bg-red-500 text-white text-[7px] leading-none flex items-center justify-center hover:bg-red-600 transition-colors shadow-sm";
+                closeBtn.innerText = "✕";
+                closeBtn.onclick = () => removeAutonomyBadge(b.id);
+
+                chip.appendChild(textBox);
+                chip.appendChild(closeBtn);
+                container.appendChild(chip);
+            });
+        }
+
+        function showModal(title, msg, type = 'info') {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-desc').innerHTML = msg;
+            document.getElementById('modal-icon').innerText = type === 'error' ? '🚨' : (type === 'success' ? '✅' : '🔔');
+            document.getElementById('custom-modal').classList.remove('hidden-element');
+        }
+        function closeModal() { document.getElementById('custom-modal').classList.add('hidden-element'); }
+        function showConfirmModal() { document.getElementById('confirm-modal').classList.remove('hidden-element'); }
+        function closeConfirmModal() { document.getElementById('confirm-modal').classList.add('hidden-element'); }
+
+        function translateError(errStr) {
+            const err = errStr.toLowerCase();
+            if(err.includes("quota") || err.includes("429")) return "일일 AI 사용량을 초과했거나 요청이 너무 많습니다.<br>잠시 후 다시 시도해주세요.";
+            if(err.includes("network") || err.includes("통신 실패") || err.includes("fetch") || err.includes("failed to fetch")) return "GAS API 통신에 실패했습니다.<br>GAS 웹앱 URL 설정 및 네트워크 상태를 확인해주세요.";
+            if(err.includes("safety") || err.includes("blocked")) return "입력하신 내용 중에 AI 안전 필터(욕설, 폭력성 등)에 걸리는 단어가 포함된 것 같습니다.<br>내용을 순화하여 다시 작성해주세요.";
+            if(err.includes("api key")) return "AI 시스템 인증에 문제가 발생했습니다.<br>관리자에게 문의해주세요.";
+            return `알 수 없는 오류가 발생했습니다.<br><span class="text-xs text-slate-400 mt-2 block">(${errStr})</span>`;
+        }
+
+        function selArea(v, el) { 
+            if (area) {
+                tabStates[area] = {
+                    case: document.getElementById('case-inp').value,
+                    subj: document.getElementById('subj-inp').value,
+                    autonomyBadges: [...selectedAutonomyBadges],
+                    resultHtml: document.getElementById('result-tbody').innerHTML,
+                    resultText: rawGeneratedText
+                };
+            }
+
+            area = v; 
+            document.querySelectorAll('.area-btn').forEach(b => b.classList.remove('active-main'));
+            el.classList.add('active-main');
+
+            const keySec = document.getElementById('keyword-section');
+            const dynGrp = document.getElementById('dynamic-input-group');
+            const stuCountGrp = document.getElementById('student-count-group');
+            const caseGrp = document.getElementById('case-group');
+            const autoBadgeSec = document.getElementById('autonomy-badge-section');
+            
+            const caseLabel = document.getElementById('case-label');
+            const caseInp = document.getElementById('case-inp');
+            const subjInp = document.getElementById('subj-inp');
+            const dynLabel = document.getElementById('dynamic-label');
+
+            const btnExportResult = document.getElementById('btn-export-result');
+
+            const defaultResult = '<tr class="filler-row" style="height: 100%;"><td class="excel-num"></td><td></td></tr>';
+
+            rawGeneratedText = tabStates[area].resultText || "";
+            document.getElementById('result-tbody').innerHTML = tabStates[area].resultHtml || defaultResult;
+
+            document.getElementById('student-count').value = 1;
+
+            stuCountGrp.classList.remove('hidden-element'); 
+            btnExportResult.classList.remove('hidden-element');
+
+            if (area === '자율' || area === '진로') {
+                autoBadgeSec.classList.remove('hidden-element');
+                caseGrp.classList.add('hidden-element');
+                keySec.classList.add('hidden-element');
+                dynGrp.classList.add('hidden-element');
+
+                document.getElementById('autonomy-label').innerText = (area === '자율') ? '자율활동 내용 선택' : '진로활동 내용 선택';
+                selectedAutonomyBadges = tabStates[area].autonomyBadges || [];
+                renderSelectedAutonomyBadges();
+                renderAutonomyPresets();
+            } else if (area === '행동특성') {
+                autoBadgeSec.classList.add('hidden-element');
+                caseGrp.classList.remove('hidden-element');
+                keySec.classList.remove('hidden-element');
+                dynGrp.classList.add('hidden-element');
+                
+                caseLabel.innerText = '학생 관찰 기록 (필수)';
+                caseInp.placeholder = '예시: 매사에 성실함, 책임감이 강함, 수업 시간에 산만함, 운동 좋아함';
+            } else {
+                autoBadgeSec.classList.add('hidden-element');
+                caseGrp.classList.remove('hidden-element');
+                keySec.classList.add('hidden-element');
+
+                if (area === '과세특' || area === '동아리') { 
+                    dynLabel.innerText = (area === '과세특') ? '과목명' : '동아리명';
+                    subjInp.placeholder = (area === '과세특') ? '예시: 국어, 영어, 수학, 과학' : '예시: 과학영화 감상반, 농구반, 건강 걷기반';
+                    dynGrp.classList.remove('hidden-element'); 
+                } else { 
+                    dynGrp.classList.add('hidden-element'); 
+                }
+                
+                if (area === '동아리') {
+                    caseLabel.innerText = '동아리 활동 내용';
+                    caseInp.placeholder = '예시: 또래 상담 멘토링, 영화 감상문 발표, 점자책 만들기';
+                } else if (area === '과세특') {
+                    caseLabel.innerText = '교과 학습 및 활동 내용';
+                    caseInp.placeholder = '예시: 밀도, 순물질과 혼합물, 거울과 렌즈 (키워드로만 입력하셔도 됩니다)';
+                }
+            }
+
+            document.getElementById('case-inp').value = tabStates[area].case || '';
+            document.getElementById('subj-inp').value = tabStates[area].subj || '';
+
+            updateKeywords();
+        }
+
+        function selChar(v) {
+            charLimit = v;
+        }
+
+        function updateKeywords() {
+            selectedKeywords.clear();
+            const posBox = document.getElementById('keyword-pos-box');
+            const negBox = document.getElementById('keyword-neg-box');
+            posBox.innerHTML = '';
+            negBox.innerHTML = '';
+            if (!keywordDB[area]) return;
+
+            const pos = keywordDB[area].pos || {};
+            const neg = keywordDB[area].neg || {};
+
+            for (const category of Object.keys(pos)) {
+                const posRow = document.createElement('div');
+                posRow.className = 'h-[30px] flex items-center gap-2';
+                (pos[category] || []).forEach(kw => posRow.appendChild(makeKeywordChip(kw, 'active-pos', 'kw-pos')));
+                posBox.appendChild(posRow);
+
+                const negRow = document.createElement('div');
+                negRow.className = 'h-[30px] flex items-center gap-2';
+                (neg[category] || []).forEach(kw => negRow.appendChild(makeKeywordChip(kw, 'active-neg', 'kw-neg')));
+                negBox.appendChild(negRow);
+            }
+        }
+
+        function makeKeywordChip(kw, activeClass, extra) {
+            const chip = document.createElement('button');
+            chip.className = ('chip-btn kw-chip px-3 py-1 rounded-lg text-[13px] ' + extra).trim();
+            chip.textContent = kw;
+            chip.onclick = () => toggleKeyword(kw, chip, activeClass);
+            return chip;
+        }
+
+        function toggleKeyword(kw, chip, activeClass) {
+            if (selectedKeywords.has(kw)) { selectedKeywords.delete(kw); chip.classList.remove(activeClass); }
+            else { selectedKeywords.add(kw); chip.classList.add(activeClass); }
+        }
+
+        async function runAI() {
+            let cases = "";
+            if (area === '자율' || area === '진로') {
+                if (selectedAutonomyBadges.length === 0) {
+                    showModal('입력 확인', `${area} 활동 배지를 최소 1개 이상 선택하거나 직접 입력해 주세요.`, 'info');
+                    return;
+                }
+                cases = selectedAutonomyBadges.map(b => b.text.trim()).filter(t => t.length > 0).join(', ');
+            } else {
+                cases = document.getElementById('case-inp').value.trim();
+                if(!cases) {
+                    showModal('입력 확인', '활동 내용이나 관찰 기록을 먼저 입력해주세요.', 'info');
+                    return;
+                }
+            }
+            
+            const btn = document.getElementById('run-btn');
+            const loadContainer = document.getElementById('loading-container');
+            const loadMsg = document.getElementById('loading-msg');
+            const loadBar = document.getElementById('loading-bar');
+            const loadPercent = document.getElementById('loading-percent');
+
+            btn.classList.add('hidden-element');
+            loadContainer.classList.remove('hidden-element');
+
+            loadBar.style.width = '0%';
+            loadPercent.innerText = '0%';
+            loadMsg.innerText = "🔍 AI 분석 준비 중...";
+
+            let sentenceCount = parseInt(document.getElementById('student-count').value) || 1;
+
+            const chunkSize = 5;
+            const chunks = [];
+
+            const lines = cases.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            for (let i = 0; i < sentenceCount; i += chunkSize) {
+                const currentChunkSize = Math.min(chunkSize, sentenceCount - i);
+                let chunkCases = "";
+
+                if (lines.length >= sentenceCount) {
+                    chunkCases = lines.slice(i, i + currentChunkSize).join('\n');
+                } else {
+                    chunkCases = cases;
+                }
+
+                chunks.push({
+                    sentenceCount: currentChunkSize,
+                    cases: chunkCases
+                });
+            }
+
+            const totalChunks = chunks.length;
+            let completedCount = 0;
+            let allResults = [];
+            let accumulatedText = "";
+
+            for (let i = 0; i < totalChunks; i++) {
+                const chunk = chunks[i];
+                const chunkNum = i + 1;
+
+                loadMsg.innerText = `🔍 [${chunkNum}/${totalChunks}] AI 분석 중... (${completedCount} / ${sentenceCount}개 완료)`;
+                const progressVal = Math.round((completedCount / sentenceCount) * 100);
+                loadBar.style.width = progressVal + '%';
+                loadPercent.innerText = progressVal + '%';
+
+                const payload = {
+                    area: area,
+                    charLimit: charLimit,
+                    sentenceCount: chunk.sentenceCount,
+                    subject: document.getElementById('subj-inp').value,
+                    cases: chunk.cases,
+                    keywords: Array.from(selectedKeywords).join(', ')
+                };
+
+                try {
+                    let res;
+                    if (typeof google !== 'undefined' && google.script && google.script.run) {
+                        res = await new Promise((resolve, reject) => {
+                            google.script.run
+                                .withSuccessHandler(resolve)
+                                .withFailureHandler(err => reject(new Error(err && err.message ? err.message : String(err))))
+                                .generateRecordFromAI(payload);
+                        });
+                    } else {
+                        if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes("YOUR_GAS_WEB_APP_URL_HERE")) {
+                            throw new Error("GAS 웹 앱 배포 URL이 설정되지 않았습니다. index.html 파일의 GAS_WEB_APP_URL 변수에 배포된 URL을 입력하세요.");
+                        }
+                        const response = await fetch(GAS_WEB_APP_URL, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "text/plain;charset=utf-8"
+                            },
+                            body: JSON.stringify(payload)
+                        });
+                        res = await response.json();
+                    }
+
+                    if (res.success) {
+                        completedCount += chunk.sentenceCount;
+                        const currentProgress = Math.round((completedCount / sentenceCount) * 100);
+                        loadBar.style.width = currentProgress + '%';
+                        loadPercent.innerText = currentProgress + '%';
+
+                        const rawLines = res.result.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+                        const cleanItems = rawLines.map(line => line.replace(/^(?:\d+[\.\)\-]*\s*)+/, '').trim()).filter(l => l.length > 0);
+
+                        if (cleanItems.length === 0) {
+                            const cleanRes = res.result.replace(/^(?:\d+[\.\)\-]*\s*)+/, '').trim();
+                            allResults.push(cleanRes);
+                            accumulatedText += `${completedCount - chunk.sentenceCount + 1}. ${cleanRes}\n`;
+                        } else {
+                            cleanItems.forEach((item, idx) => {
+                                const cleanText = item.replace(/^(?:\d+[\.\)\-]*\s*)+/, '').trim();
+                                allResults.push(cleanText);
+                                const seqNum = completedCount - chunk.sentenceCount + idx + 1;
+                                accumulatedText += `${seqNum}. ${cleanText}\n`;
+                            });
+                        }
+                    } else {
+                        throw new Error(res.error || "AI 생성 오류가 발생했습니다.");
+                    }
+                } catch (err) {
+                    loadContainer.classList.add('hidden-element');
+                    btn.classList.remove('hidden-element');
+                    showModal('생성 실패', `생성 진행 중 오류가 발생했습니다.<br>완료된 부분까지만 보관하거나 다시 시도해주세요.<br><br>오류내용: ${translateError(err.toString())}`, 'error');
+                    return;
+                }
+            }
+
+            loadBar.style.width = '100%';
+            loadPercent.innerText = '100%';
+            loadMsg.innerText = "✅ 모든 학생의 생기부 생성이 완료되었습니다!";
+
+            setTimeout(() => {
+                loadContainer.classList.add('hidden-element');
+                btn.classList.remove('hidden-element');
+                
+                rawGeneratedText = accumulatedText.trim();
+                renderTable(allResults, false);
+            }, 500);
+        }
+
+        function renderTable(items, isSingle) {
+            const tbody = document.getElementById('result-tbody');
+            tbody.innerHTML = '';
+
+            if (isSingle) {
+                let stuId = document.getElementById('stu-id-inp').value.trim() || '미상';
+                const text = items[0] || '';
+                tbody.innerHTML = `<tr><td class="excel-num">${stuId}</td><td>${text.replace(/\n/g, '<br>')}</td></tr>`;
+            } else {
+                if (!items || items.length === 0) {
+                    tbody.innerHTML = '<tr class="filler-row" style="height: 100%;"><td style="border-right: 1px solid #94a3b8;"></td><td></td></tr>';
+                    return;
+                }
+
+                items.forEach((item, index) => {
+                    const cleanText = item.trim().replace(/^(?:\d+[\.\)\-]*\s*)+/, '').trim();
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td class="excel-num">${index + 1}</td><td class="result-cell">${cleanText.replace(/\n/g, '<br>')}</td>`;
+                    tbody.appendChild(tr);
+                });
+
+                const filler = document.createElement('tr');
+                filler.className = 'filler-row';
+                filler.style.height = '100%';
+                filler.innerHTML = '<td class="excel-num"></td><td></td>';
+                tbody.appendChild(filler);
+            }
+        }
+
+        function exportExcel(tableId, fileName) {
+            try {
+                const bodyTable = document.getElementById(tableId);
+                const dataRows = bodyTable.tBodies[0] ? bodyTable.tBodies[0].rows : [];
+                const firstRow = dataRows[0];
+
+                if(dataRows.length === 0 || (dataRows.length === 1 && (!firstRow.cells[1] || firstRow.innerText.trim() === '' || firstRow.innerText.includes('결과가') || firstRow.innerText.includes('비어있')))) {
+                    showModal('알림', '다운로드할 데이터가 없습니다.', 'info');
+                    return;
+                }
+
+                const table = document.createElement('table');
+                table.innerHTML = '<thead><tr><th>순</th><th>특기사항</th></tr></thead>';
+                const clonedBody = bodyTable.tBodies[0].cloneNode(true);
+                clonedBody.querySelectorAll('.filler-row').forEach(r => r.remove());
+                table.appendChild(clonedBody);
+
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.table_to_sheet(table);
+
+                XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+
+                ws['!cols'] = [
+                    { wch: 15 }, 
+                    { wch: 100 }
+                ];
+
+                const range = XLSX.utils.decode_range(ws['!ref']);
+                for (let R = range.s.r; R <= range.e.r; ++R) {
+                    for (let C = range.s.c; C <= range.e.c; ++C) {
+                        const cell_ref = XLSX.utils.encode_cell({ c: C, r: R });
+                        
+                        if (!ws[cell_ref]) continue;
+
+                        ws[cell_ref].s = {
+                            alignment: { vertical: "center", horizontal: "center", wrapText: true },
+                            border: {
+                                top: { style: "thin", color: { auto: 1 } }, 
+                                bottom: { style: "thin", color: { auto: 1 } },
+                                left: { style: "thin", color: { auto: 1 } }, 
+                                right: { style: "thin", color: { auto: 1 } }
+                            }
+                        };
+
+                        if (R === 0) {
+                            ws[cell_ref].s.fill = { fgColor: { rgb: "FDE68A" } }; 
+                            ws[cell_ref].s.font = { bold: true, color: { rgb: "334155" }, sz: 12 };
+                        } else {
+                            ws[cell_ref].s.font = { sz: 11 };
+                            if (C === 1) ws[cell_ref].s.alignment.horizontal = "left"; 
+                        }
+                    }
+                }
+
+                XLSX.writeFile(wb, fileName + ".xlsx");
+                
+            } catch (err) {
+                showModal('오류', '엑셀 파일을 생성하는 중 문제가 발생했습니다.<br>' + err.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html>
