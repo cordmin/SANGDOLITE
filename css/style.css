@@ -86,15 +86,16 @@ button:not(:disabled):active { scale: 0.96; }
 .excel-table tr:last-child td { border-bottom: none; }
 /* 1200px 이상: 3단 배치. 좁아지면 가운데 칸이 먼저 줄고, 그보다 좁으면 모바일(세로) 배치 */
 @media (min-width: 1200px) { main.autonomy-layout { flex-basis: 493px; } }
+/* 1200px 미만: 사이드바는 버거 버튼으로 여는 왼쪽 서랍 */
+.mobile-bar { display: none; }
 @media (max-width: 1199px) {
-    .sidebar-panel { padding: 16px 12px 12px !important; }
-    .sidebar-logo { width: 44px !important; height: 44px !important; margin-bottom: 4px !important; }
-    .sidebar-panel h1 { top: 0 !important; font-size: 16px; }
-    .sidebar-panel nav { flex-direction: row; overflow-x: auto; scrollbar-width: none; gap: 6px; margin-top: 12px !important; }
-    .sidebar-panel nav::-webkit-scrollbar { display: none; }
-    .sidebar-area-btn { width: auto; flex-shrink: 0; min-height: 0; padding: 9px 12px; gap: 6px; font-size: 13px; border-radius: 12px; }
-    .sidebar-area-btn svg { width: 17px; height: 17px; }
-    .sidebar-footer { padding-top: 10px !important; }
+    .mobile-bar { display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 30; padding: 10px 14px; background: #0f172a; color: #f8fafc; }
+    .mobile-bar button { display: inline-flex; padding: 6px; margin-left: -6px; border-radius: 10px; color: #e2e8f0; }
+    .mobile-bar button:hover { background: #1e293b; }
+    .mobile-bar svg { width: 24px; height: 24px; }
+    #sidebar { position: fixed; top: 0; bottom: 0; left: 0; z-index: 50; width: 264px !important; padding: 12px !important; transform: translateX(-105%); transition: transform .25s ease; }
+    #sidebar.open { transform: none; }
+    #drawer-backdrop.open { display: block; position: fixed; inset: 0; z-index: 45; background: rgba(15, 23, 42, .55); }
 }
 @media (max-width: 639px) {
     #preset-group-container, #selected-autonomy-badges { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
@@ -119,7 +120,6 @@ td.excel-byte { background-color: #f1f5f9; padding: 12px 8px !important; }
 .guide-num { width: 22px; height: 22px; border-radius: 50%; background: #334155; color: #fff; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .guide-title { font-size: 14px; font-weight: 700; color: #1e293b; }
 .guide-tag { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 99px; background: #f1f5f9; color: #475569; }
-.guide-tag.edited { background: #fef3c7; color: #92400e; }
 .guide-body { padding: 12px 14px; font-size: 14px; line-height: 1.75; color: #334155; white-space: pre-wrap; word-break: keep-all; overflow-wrap: anywhere; }
 .guide-edit { display: block; width: 100%; padding: 12px 14px; font-size: 14px; line-height: 1.75; color: #1e293b; border: 0; resize: vertical; min-height: 120px; background: #fffbeb; }
 .guide-edit:focus { outline: none; background: #fff; box-shadow: inset 0 0 0 2px #334155; }
@@ -127,5 +127,17 @@ td.excel-byte { background-color: #f1f5f9; padding: 12px 8px !important; }
 .guide-btn { height: 32px; padding: 0 12px; border-radius: 10px; font-size: 13px; font-weight: 700; border: 1px solid #cbd5e1; background: #fff; color: #334155; }
 .guide-btn.dark { background: #334155; border-color: #334155; color: #fff; }
 .guide-btn:hover { filter: brightness(0.96); }
-.guide-pw { height: 32px; width: 140px; padding: 0 10px; border: 1px solid #94a3b8; border-radius: 10px; font-size: 13px; }
-.guide-pw:focus { outline: none; border-color: #334155; }
+
+/* 관리자 진입: 사이드바 아래 흐린 톱니 → 비밀번호 */
+.admin-gear { color: #64748b; display: inline-flex; padding: 2px; border-radius: 6px; transition: color .2s; }
+.admin-gear:hover { color: #e2e8f0; }
+.admin-gear svg { width: 14px; height: 14px; }
+.admin-pop { position: absolute; left: 50%; bottom: calc(100% - 32px); transform: translateX(-50%); width: 190px; padding: 10px; border-radius: 12px; background: #fff; box-shadow: 0 8px 24px rgba(0, 0, 0, .3); display: flex; flex-direction: column; gap: 6px; z-index: 30; }
+.admin-pop.hidden-element { display: none !important; }
+.admin-pop input { height: 32px; padding: 0 10px; border: 1px solid #94a3b8; border-radius: 8px; font-size: 13px; color: #0f172a; }
+.admin-pop input:focus { outline: none; border-color: #334155; }
+.admin-pop button { height: 32px; border-radius: 8px; background: #334155; color: #fff; font-size: 13px; font-weight: 700; }
+
+/* 결과 표가 칸 높이를 끝까지 채우도록 (휴대폰처럼 높이가 % 로 안 잡힐 때 대비) */
+#result-scroll { display: flex; flex-direction: column; }
+#result-scroll > #result-table { flex: 1 0 auto; }

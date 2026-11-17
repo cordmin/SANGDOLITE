@@ -27,7 +27,6 @@ const post = body => ctx.doPost({ postData: { contents: JSON.stringify(body) } }
 // 읽기
 const view = ctx.doGet({ parameter: { action: 'guide' } });
 assert.ok(view.success && view.guide.order.behavior.length === 8);
-assert.equal(view.guide.parts.style.edited, false);
 
 // 비밀번호
 assert.equal(post({ action: 'login', password: 'x' }).success, false);
@@ -37,19 +36,18 @@ assert.equal(post({ action: 'saveGuide', password: 'x', parts: { style: 'a' } })
 // 저장 → 지침에 반영
 const original = view.guide.parts.style.body;
 let r = post({ action: 'saveGuide', password: 'pw', parts: { style: '새 문체 규칙' } });
-assert.ok(r.success && r.guide.parts.style.edited);
+assert.ok(r.success && r.guide.parts.style.body === '새 문체 규칙');
 assert.match(ctx.buildPrompt({ area: '동아리', charLimit: 100, sentenceCount: 3, cases: 'x' }), /새 문체 규칙/);
 assert.equal(post({ action: 'saveGuide', password: 'pw', parts: { style: '  ' } }).success, false, '빈 내용 거부');
 assert.equal(post({ action: 'saveGuide', password: 'pw', parts: { nope: 'a' } }).success, false, '없는 파트 거부');
 
-// 한 단계 되돌리기 / 기본값
-post({ action: 'saveGuide', password: 'pw', parts: { style: '두 번째' } });
-r = post({ action: 'resetGuide', password: 'pw', mode: 'undo', keys: ['style'] });
-assert.equal(r.guide.parts.style.body, '새 문체 규칙');
-r = post({ action: 'resetGuide', password: 'pw', mode: 'default' });
+// 기본 지침과 똑같이 고쳐 저장하면 저장 칸을 비움
+r = post({ action: 'saveGuide', password: 'pw', parts: { style: original } });
 assert.equal(r.guide.parts.style.body, original);
-assert.equal(r.guide.parts.style.edited, false);
+assert.equal(store.GUIDE_style, undefined);
 
-// 입력 속 {글자수}는 바뀌지 않음
-assert.match(ctx.buildPrompt({ area: '행동특성', charLimit: 250, sentenceCount: 5, cases: '{글자수}' }), /\{글자수\}/);
+// 빈칸이 실제 값으로 채워지고, 입력 속 {생성 글자 수}는 바뀌지 않음
+const built = ctx.buildPrompt({ area: '행동특성', charLimit: 250, sentenceCount: 5, cases: '{생성 글자 수}' });
+assert.match(built, /250자를 넘지 않되 213자 이상/);
+assert.match(built, /\{생성 글자 수\}/);
 console.log('Guide admin passed');

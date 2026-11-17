@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────
 // 스크립트 속성(비밀 금고)에 넣어 둘 값  ※ 코드와 GitHub에는 절대 적지 않음
 //   GEMINI_KEYS     : API 키들을 쉼표로 이어서  (예: 키1,키2,키3)
-//   ADMIN_PASSWORD  : 작성요령 수정용 관리자 비밀번호
+//   ADMIN_PASSWORD  : 프롬프트 수정용 관리자 비밀번호
 //   GUIDE_<파트이름> : 관리자가 고친 지침 (자동 저장됨, 직접 넣을 필요 없음)
 // ─────────────────────────────────────────────────────────────
 const PROPS = PropertiesService.getScriptProperties();
@@ -11,7 +11,7 @@ function jsonOut(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
 
-// 화면이 작성요령을 읽어 갈 때: ?action=guide
+// 화면이 프롬프트를 읽어 갈 때: ?action=guide
 function doGet(e) {
   if (e && e.parameter && e.parameter.action === 'guide') {
     return jsonOut({ success: true, guide: guideForView() });
@@ -25,7 +25,6 @@ function doPost(e) {
     switch (data.action) {
       case 'login':     return jsonOut(checkPassword(data.password) ? { success: true } : { success: false, error: '비밀번호가 틀렸어요.' });
       case 'saveGuide': return jsonOut(saveGuide(data));
-      case 'resetGuide': return jsonOut(resetGuide(data));
       default:          return jsonOut(generateRecordFromAI(data));
     }
   } catch (error) {
@@ -44,7 +43,7 @@ function currentParts() {
   const parts = {};
   Object.keys(GUIDE_PARTS).forEach(key => {
     const custom = saved['GUIDE_' + key];
-    parts[key] = { title: GUIDE_PARTS[key].title, body: custom || GUIDE_PARTS[key].body, edited: !!custom };
+    parts[key] = { title: GUIDE_PARTS[key].title, body: custom || GUIDE_PARTS[key].body };
   });
   return parts;
 }
@@ -53,38 +52,24 @@ function guideForView() {
   return { parts: currentParts(), order: GUIDE_ORDER };
 }
 
-// 바뀐 파트만 저장. 저장 직전 내용은 GUIDE_PREV_ 로 남겨 '한 단계 되돌리기'에 씀
+// 바뀐 파트만 저장. 기본 지침과 같아지면 저장 칸을 비워 기본 지침을 그대로 씀
 function saveGuide(data) {
   if (!checkPassword(data.password)) return { success: false, error: '비밀번호가 틀렸어요.' };
   const changes = data.parts || {};
   const now = currentParts();
   const toSave = {};
+  const toDelete = [];
   for (const key of Object.keys(changes)) {
     if (!GUIDE_PARTS[key]) return { success: false, error: '알 수 없는 파트: ' + key };
     const body = String(changes[key]).trim();
     if (!body) return { success: false, error: `'${GUIDE_PARTS[key].title}' 내용이 비어 있어요.` };
     if (body.length > GUIDE_MAX_LEN) return { success: false, error: `'${GUIDE_PARTS[key].title}'이 너무 길어요. (${GUIDE_MAX_LEN}자 이하)` };
     if (body === now[key].body) continue;
-    toSave['GUIDE_PREV_' + key] = now[key].body;
-    toSave['GUIDE_' + key] = body;
+    if (body === GUIDE_PARTS[key].body) toDelete.push('GUIDE_' + key);
+    else toSave['GUIDE_' + key] = body;
   }
   PROPS.setProperties(toSave);
-  return { success: true, guide: guideForView() };
-}
-
-// mode: 'default' = 처음 기본 지침으로 / 'undo' = 바로 전 저장 내용으로
-function resetGuide(data) {
-  if (!checkPassword(data.password)) return { success: false, error: '비밀번호가 틀렸어요.' };
-  const keys = (data.keys && data.keys.length) ? data.keys : Object.keys(GUIDE_PARTS);
-  keys.forEach(key => {
-    if (!GUIDE_PARTS[key]) return;
-    if (data.mode === 'undo') {
-      const prev = PROPS.getProperty('GUIDE_PREV_' + key);
-      if (prev) PROPS.setProperty('GUIDE_' + key, prev);
-    } else {
-      PROPS.deleteProperty('GUIDE_' + key);
-    }
-  });
+  toDelete.forEach(k => PROPS.deleteProperty(k));
   return { success: true, guide: guideForView() };
 }
 
@@ -92,13 +77,14 @@ function resetGuide(data) {
 // 생활기록부 작성요령 (AI에게 보내는 지침)
 // - 지침은 '행동특성용'과 '공용(자율·진로·동아리·과세특)' 두 가지
 // - 각 지침은 파트 목록이며, 위에 있는 파트일수록 중요함 (규칙이 부딪히면 앞 번호 우선)
-// - {중괄호} 자리는 생성할 때 실제 값으로 바뀜
+// - {중괄호} 자리는 생성할 때 실제 값으로 바뀜 ({생성 글자 수}·{생성 문단 개수}는 화면 옵션 값, {최소 글자 수}는 그 85%)
 // ─────────────────────────────────────────────────────────────
 const GUIDE_PARTS = {
   intro_behavior: {
     title: '작업 설명 (행동특성)',
     body: `대한민국 중학교 학교생활기록부에 들어갈 문장을 작성하는 작업입니다.
-2026학년도 학교생활기록부 기재요령에 맞게, 아래 자료를 바탕으로 '행동특성 및 종합의견' 문장 예시 {문장개수}개를 작성하세요.
+2026학년도 학교생활기록부 기재요령에 맞게, 아래 자료를 바탕으로 '행동특성 및 종합의견' 문단 {생성 문단 개수}개를 작성하세요.
+문단 하나는 번호 하나에 해당하며, 여러 문장으로 이루어질 수 있습니다.
 
 [학생 자료]
 - 좋은 태도(강조할 점): {좋은태도}
@@ -109,7 +95,8 @@ const GUIDE_PARTS = {
   intro_general: {
     title: '작업 설명 (자율·진로·동아리·과세특)',
     body: `대한민국 중학교 학교생활기록부에 들어갈 문장을 작성하는 작업입니다.
-2026학년도 학교생활기록부 기재요령에 맞게, 아래 자료를 바탕으로 '{영역}' 영역에 바로 복사해서 쓸 수 있는 서로 다른 특기사항 예시 {문장개수}개를 작성하세요.
+2026학년도 학교생활기록부 기재요령에 맞게, 아래 자료를 바탕으로 '{영역}' 영역에 바로 복사해서 쓸 수 있는 서로 다른 특기사항 문단 {생성 문단 개수}개를 작성하세요.
+문단 하나는 번호 하나에 해당하는 특기사항 한 덩어리이며, 여러 문장으로 이루어집니다.
 
 [입력 자료]
 - 영역: {영역}
@@ -132,15 +119,16 @@ const GUIDE_PARTS = {
     body: `- 좋은 태도는 관찰 메모 속 구체적인 행동과 연결하여 강조할 것.
 - 아쉬운 태도가 주어지면 숨기지 말고 드러낼 것. 다만 단어를 낙인처럼 그대로 쓰지 말고, 실제 모습과 나아지려는 노력의 과정으로 표현한 뒤 앞으로의 발전 기대로 마무리할 것.
 - 예: 소극적 → 처음에는 발표를 망설였으나 점차 자기 생각을 말하려 노력하며, 자신감을 키워 간다면 더 큰 성장이 기대됨.
-- 아쉬운 태도는 모든 문장에 넣지 말고 일부 문장에만 자연스럽게 반영할 것.`
+- 아쉬운 태도는 모든 문단에 넣지 말고 일부 문단에만 자연스럽게 반영할 것.`
   },
   core_general: {
     title: '활동 분리 (자율·진로·동아리·과세특 핵심)',
-    body: `- 서로 다른 활동은 한 문장 안에 엮지 말고, 각각 독립된 문장으로 나란히 쓸 것. 분량이 모자라도 엮지 말 것.
-- 활동을 이어서, 이후, 그리고, 또한 같은 연결어로 잇지 말 것.
-- 활동이 여러 개면 각 활동에 비슷한 분량을 나눌 것.
-- 같은 활동이라도 학업 역량, 협력·소통, 진로 연계, 문제 해결, 성실성 등 서로 다른 태도와 배운 점을 담아 예시마다 다르게 쓰고, 모든 예시가 첫 번째 활동부터 시작하지 않게 할 것.
-- 좋은 예 (활동 2개, 구조만 참고하고 분량은 분량 규칙을 따를 것):
+    body: `- 각 문단에는 입력된 활동을 빠짐없이 모두 담을 것. 활동 하나만 쓰고 끝내지 말 것.
+- 문단 안에서 서로 다른 활동은 한 문장 안에 엮지 말고, 활동마다 따로 문장을 써서 나란히 놓을 것. 분량이 모자라도 엮지 말 것.
+- 활동 문장끼리 이어서, 이후, 그리고, 또한 같은 연결어로 잇지 말 것.
+- 한 문단 안에서 각 활동에 비슷한 분량을 나눌 것.
+- 같은 활동이라도 학업 역량, 협력·소통, 진로 연계, 문제 해결, 성실성 등 서로 다른 태도와 배운 점을 담아 문단마다 다르게 쓰고, 모든 문단이 첫 번째 활동부터 시작하지 않게 할 것.
+- 좋은 예 (활동 2개가 모두 담긴 문단 하나, 구조만 참고하고 분량은 분량 규칙을 따를 것):
   학급 회장 선거에 입후보하여 공약을 준비하고 발표하는 과정에서 뛰어난 소통 능력과 책임감을 보임. 생명존중교육에 진지한 태도로 참여하여 배운 점을 일상에서 실천하려는 모습이 돋보임.
 - 나쁜 예 1, 한 문장에 섞음: 정부반장선거에 참여하여 소통 능력을 보였으며 생명존중교육에도 성실히 참여함.
 - 나쁜 예 2, 연결어로 이음: 정부반장선거에 참여하여 소통 능력을 보임. 이어 생명존중교육에도 성실히 참여함.
@@ -164,14 +152,14 @@ const GUIDE_PARTS = {
   },
   length: {
     title: '분량',
-    body: `- 각 문장은 공백 포함 {글자수}자를 넘지 않되 {최소글자수}자 이상 채울 것. {글자수}자는 넘으면 안 되는 한도임.
-- 여러 문장의 합이 아니라 문장 하나하나의 분량임. 모자라면 구체적 행동·맥락·역할·수치·성장 과정을 더 자세히 쓸 것.
+    body: `- 각 문단(번호 하나)은 공백 포함 {생성 글자 수}자를 넘지 않되 {최소 글자 수}자 이상 채울 것. {생성 글자 수}자는 넘으면 안 되는 한도임.
+- 여러 문단의 합이 아니라 문단 하나하나의 분량임. 모자라면 구체적 행동·맥락·역할·수치·성장 과정을 더 자세히 쓸 것.
 - 단, 분량보다 위의 규칙이 우선임.`
   },
   format: {
     title: '출력 형식',
-    body: `- 1번부터 {문장개수}번까지 "1. ", "2. "처럼 숫자, 마침표, 띄어쓰기로 시작하여 서로 다른 문장 정확히 {문장개수}개를 출력할 것.
-- 번호 붙은 문장 외에 다른 말은 출력하지 말 것.`
+    body: `- 1번부터 {생성 문단 개수}번까지 "1. ", "2. "처럼 숫자, 마침표, 띄어쓰기로 시작하여 서로 다른 문단 정확히 {생성 문단 개수}개를 출력할 것. 문단 하나는 줄을 바꾸지 말고 한 줄로 쓸 것.
+- 번호 붙은 문단 외에 다른 말은 출력하지 말 것.`
   },
   check_behavior: {
     title: '마지막 점검 (행동특성)',
@@ -182,6 +170,7 @@ const GUIDE_PARTS = {
     title: '마지막 점검 (자율·진로·동아리·과세특)',
     body: `가장 자주 틀리는 부분이니 출력 전에 반드시 다시 확인할 것.
 - 문장 끝이 ~했음, ~하였음, ~였음처럼 과거형이면 ~함, ~임처럼 현재형으로 고칠 것.
+- 각 문단에 입력된 활동이 모두 들어 있는지 확인하고, 빠진 활동이 있으면 채울 것.
 - 서로 다른 활동 두 개가 한 문장 안에 엮여 있으면 두 문장으로 나눌 것.`
   }
 };
@@ -206,9 +195,9 @@ function buildPrompt(data) {
 
 ${rules}`;
   const vals = {
-    '문장개수': data.sentenceCount,
-    '글자수': data.charLimit,
-    '최소글자수': Math.round(data.charLimit * 0.85),
+    '생성 문단 개수': data.sentenceCount,
+    '생성 글자 수': data.charLimit,
+    '최소 글자 수': Math.round(data.charLimit * 0.85), // 생성 글자 수의 85%
     '영역': data.area,
     '과목': data.subject || '해당 없음',
     '좋은태도': (data.posKeywords !== undefined ? data.posKeywords : data.keywords) || '없음',
@@ -216,7 +205,7 @@ ${rules}`;
     '입력내용': data.cases
   };
   // 입력 내용 속 중괄호는 건드리지 않도록 지침 쪽 빈칸만 한 번에 바꿈
-  return text.replace(/\{(문장개수|글자수|최소글자수|영역|과목|좋은태도|아쉬운태도|입력내용)\}/g, (_, k) => String(vals[k]));
+  return text.replace(/\{(생성 문단 개수|생성 글자 수|최소 글자 수|영역|과목|좋은태도|아쉬운태도|입력내용)\}/g, (_, k) => String(vals[k]));
 }
 
 
