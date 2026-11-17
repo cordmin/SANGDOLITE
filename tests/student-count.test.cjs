@@ -3,8 +3,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-const source = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-const handler = source.match(/function validateStudentCount\(input, commit = false\) \{[\s\S]*?\n        \}/);
+const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'app.js'), 'utf8');
+const handler = source.match(/function validateStudentCount\(input, commit = false\) \{[\s\S]*?\n\}/);
 assert.ok(handler, 'Count validator must exist');
 const context = vm.createContext({});
 vm.runInContext(handler[0], context);
