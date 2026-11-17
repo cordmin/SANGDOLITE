@@ -20,7 +20,7 @@ const FILLER_ROW = '<tr class="filler-row" style="height: 100%;"><td class="exce
 
 let area = '자율';
 let charLimit = 125; 
-const selectedKeywords = new Set();
+const selectedKeywords = new Map(); // 단어 → 'pos'(좋은 태도) | 'neg'(아쉬운 태도)
 let rawGeneratedText = ""; 
 
 // 메뉴별 입력·결과를 따로 기억 (메뉴를 오가도 내용 유지)
@@ -239,6 +239,10 @@ function updateKeywords() {
     }
 }
 
+function pickKeywords(side) {
+    return [...selectedKeywords].filter(([, s]) => s === side).map(([kw]) => kw).join(', ');
+}
+
 function makeKeywordPair(p, n) {
     const pair = document.createElement('div');
     pair.className = 'kw-pair';
@@ -254,7 +258,7 @@ function makeKeywordPair(p, n) {
             pair.classList.toggle('kw-instant', !pair.dataset.pick);
             void pair.offsetWidth;
             pair.dataset.pick = side; pair.dataset.side = side;
-            selectedKeywords.add(kw);
+            selectedKeywords.set(kw, side);
         };
         pair.appendChild(btn);
     });
@@ -293,21 +297,10 @@ async function runAI() {
     const chunkSize = 5;
     const chunks = [];
 
-    const lines = cases.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    // 입력 칸 전체가 한 덩어리 재료(가르친 활동 전체 / 한 학생의 여러 행동)이므로
+    // 줄 수와 상관없이 모든 요청에 전체 내용을 그대로 보냄. 5문장씩 나눠 요청.
     for (let i = 0; i < sentenceCount; i += chunkSize) {
-        const currentChunkSize = Math.min(chunkSize, sentenceCount - i);
-        let chunkCases = "";
-
-        if (lines.length >= sentenceCount) {
-            chunkCases = lines.slice(i, i + currentChunkSize).join('\n');
-        } else {
-            chunkCases = cases;
-        }
-
-        chunks.push({
-            sentenceCount: currentChunkSize,
-            cases: chunkCases
-        });
+        chunks.push({ sentenceCount: Math.min(chunkSize, sentenceCount - i), cases });
     }
 
     const totalChunks = chunks.length;
@@ -341,7 +334,9 @@ async function runAI() {
             sentenceCount: chunk.sentenceCount,
             subject: document.getElementById('subj-inp').value,
             cases: chunk.cases,
-            keywords: Array.from(selectedKeywords).join(', ')
+            posKeywords: pickKeywords('pos'),
+            negKeywords: pickKeywords('neg'),
+            keywords: Array.from(selectedKeywords.keys()).join(', ') // 예전 서버 호환용
         };
 
         try {
