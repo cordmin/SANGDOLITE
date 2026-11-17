@@ -573,6 +573,7 @@ let settingsData = null;      // { model, defaultModel, keys: ['AIza…abcd', ..
 let settingsRemoved = new Set(); // 지울 기존 키 번호
 let settingsAdded = [];       // 새로 넣을 키
 const MODEL_SUGGESTIONS = ['gemini-flash-lite-latest', 'gemini-flash-latest', 'gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-3.5-pro'];
+const MODEL_CUSTOM = '__custom'; // 목록에 없는 모델을 직접 적을 때
 
 async function loadSettings() {
     document.getElementById('guide-list').innerHTML = '<p class="text-sm text-slate-500 p-4">설정을 불러오는 중…</p>';
@@ -586,7 +587,8 @@ async function loadSettings() {
 }
 
 function setSettings(res) {
-    settingsData = { model: res.model, defaultModel: res.defaultModel, keys: res.keys };
+    const known = !res.model || MODEL_SUGGESTIONS.includes(res.model);
+    settingsData = { model: known ? res.model : MODEL_CUSTOM, customModel: known ? '' : res.model, defaultModel: res.defaultModel, keys: res.keys };
     settingsRemoved = new Set(); settingsAdded = [];
     renderGuide();
 }
@@ -594,23 +596,42 @@ function setSettings(res) {
 function renderSettings() {
     const list = document.getElementById('guide-list');
     if (!settingsData) return;
-    const keyRows = settingsData.keys.map((k, i) => {
+    const mask = k => k.slice(0, 4) + '…' + k.slice(-4);
+    const rows = settingsData.keys.map((k, i) => {
         const off = settingsRemoved.has(i);
-        return `<div class="set-key${off ? ' off' : ''}"><span>${escapeHtml(k)}</span><button type="button" class="guide-btn" onclick="toggleKeyRemove(${i})">${off ? '되살리기' : '삭제'}</button></div>`;
-    }).join('') + settingsAdded.map((k, i) => `<div class="set-key new"><span>${escapeHtml(k.slice(0, 4) + '…' + k.slice(-4))} <b>새 키</b></span><button type="button" class="guide-btn" onclick="settingsAdded.splice(${i},1); renderSettings()">빼기</button></div>`).join('');
-    list.innerHTML = `
-        <div class="guide-card"><div class="guide-head"><span class="guide-title">AI 모델</span></div>
-            <div class="guide-body set-body">
-                <input id="set-model" class="set-input" list="set-model-list" placeholder="${escapeHtml(settingsData.defaultModel)}" value="${escapeHtml(settingsData.model)}">
-                <datalist id="set-model-list">${MODEL_SUGGESTIONS.map(m => `<option value="${m}">`).join('')}</datalist>
-                <p class="set-hint">비워 두면 기본 모델(${escapeHtml(settingsData.defaultModel)})을 써요. 기본 모델은 구글이 늘 최신 Flash-Lite로 이어 줘요. 적은 모델이 없어지면 기본 모델로 자동으로 바꿔 시도해요.</p>
-            </div></div>
-        <div class="guide-card"><div class="guide-head"><span class="guide-title">API 키</span><span class="guide-tag">${settingsData.keys.length - settingsRemoved.size + settingsAdded.length}개 사용</span></div>
-            <div class="guide-body set-body">
-                ${keyRows || '<p class="set-hint">등록된 키가 없어요.</p>'}
-                <div class="set-add"><input id="set-newkey" class="set-input" type="password" placeholder="새 API 키 붙여 넣기" onkeydown="if(event.key==='Enter') addSettingKey()"><button type="button" class="guide-btn" onclick="addSettingKey()">추가</button></div>
-                <p class="set-hint">키는 앞뒤 4글자만 보여요. 키가 여러 개면 돌아가며 쓰고, 하나가 막히면 다음 키로 넘어가요. [설정 저장]을 눌러야 적용돼요.</p>
-            </div></div>`;
+        return `<div class="set-key${off ? ' off' : ''}"><span>${escapeHtml(k)}</span>`
+            + `<button type="button" class="set-del" aria-label="${off ? '되살리기' : '삭제'}" title="${off ? '되살리기' : '삭제'}" onclick="toggleKeyRemove(${i})"><i data-lucide="${off ? 'rotate-ccw' : 'trash-2'}"></i></button></div>`;
+    }).concat(settingsAdded.map((k, i) =>
+        `<div class="set-key new"><span>${escapeHtml(mask(k))}<b>새 키</b></span>`
+        + `<button type="button" class="set-del" aria-label="빼기" title="빼기" onclick="settingsAdded.splice(${i},1); renderSettings()"><i data-lucide="x"></i></button></div>`
+    )).join('');
+    const count = settingsData.keys.length - settingsRemoved.size + settingsAdded.length;
+    const isCustomModel = settingsData.model === MODEL_CUSTOM;
+    list.innerHTML = `<div class="set-grid">
+        <div>
+            <div class="step-label">AI 모델</div>
+            <div class="set-box">
+                <select id="set-model" class="nice-select set-input" onchange="keepModelDraft(); renderSettings()">
+                    <option value="">기본 모델 (${escapeHtml(settingsData.defaultModel)})</option>
+                    ${MODEL_SUGGESTIONS.filter(m => m !== settingsData.defaultModel).map(m => `<option value="${m}"${m === settingsData.model ? ' selected' : ''}>${m}</option>`).join('')}
+                    <option value="${MODEL_CUSTOM}"${isCustomModel ? ' selected' : ''}>직접 입력</option>
+                </select>
+                ${isCustomModel ? `<input id="set-model-custom" class="set-input mt-2" placeholder="모델 이름 (예: gemini-3.5-flash)" value="${escapeHtml(settingsData.customModel)}">` : ''}
+            </div>
+        </div>
+        <div>
+            <div class="step-label">API 키 <span class="set-count">${count}</span></div>
+            <div class="set-box">
+                ${rows || '<p class="set-hint">등록된 키가 없어요</p>'}
+                <div class="set-add">
+                    <input id="set-newkey" class="set-input" type="password" placeholder="새 키 붙여 넣기" onkeydown="if(event.key==='Enter') addSettingKey()">
+                    <button type="button" class="set-addbtn" onclick="addSettingKey()">+ 추가</button>
+                </div>
+                <p class="set-hint">앞뒤 4글자만 보여요</p>
+            </div>
+        </div>
+    </div>`;
+    lucide.createIcons();
 }
 
 function toggleKeyRemove(i) {
@@ -631,14 +652,18 @@ function addSettingKey() {
 // 다시 그릴 때 입력 중인 모델 이름이 사라지지 않게
 function keepModelDraft() {
     const m = document.getElementById('set-model');
-    if (m) settingsData.model = m.value.trim();
+    const c = document.getElementById('set-model-custom');
+    if (m) settingsData.model = m.value;
+    if (c) settingsData.customModel = c.value.trim();
 }
 
 async function saveSettings() {
     keepModelDraft();
     const keep = settingsData.keys.map((_, i) => i).filter(i => !settingsRemoved.has(i));
     try {
-        const res = await gasPost({ action: 'saveSettings', password: guidePw, model: settingsData.model, keep, add: settingsAdded });
+        const model = settingsData.model === MODEL_CUSTOM ? settingsData.customModel : settingsData.model;
+        if (settingsData.model === MODEL_CUSTOM && !model) return showModal('', '모델 이름을 적어 주세요.', 'info');
+        const res = await gasPost({ action: 'saveSettings', password: guidePw, model, keep, add: settingsAdded });
         if (!res.success) return showModal('저장 실패', escapeHtml(res.error || '저장하지 못했어요.'), 'error');
         setSettings(res);
         showModal('', '설정을 저장했어요.<br>지금부터 문장 생성에 적용돼요.', 'info');
