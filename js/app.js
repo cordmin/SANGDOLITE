@@ -152,6 +152,7 @@ function translateError(errStr) {
 }
 
 function selArea(v, el) { 
+    setWorkVisible(true);
     if (area) {
         tabStates[area] = {
             case: document.getElementById('case-inp').value,
@@ -504,4 +505,165 @@ function exportExcel(tableId, fileName) {
     } catch (err) {
         showModal('오류', '엑셀 파일을 생성하는 중 문제가 발생했습니다.<br>' + err.message, 'error');
     }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 생활기록부 작성요령 페이지 (지침 보기 · 관리자 수정)
+// 지침은 서버(code.gs 스크립트 속성)에 있고, 저장하면 모든 사용자에게 바로 적용됨
+// ─────────────────────────────────────────────────────────────
+let guideData = null;      // { parts: {key: {title, body, edited}}, order: {behavior: [...], general: [...]} }
+let guideKind = 'behavior';
+let guidePw = null;        // 관리자 비밀번호 (새로고침하면 사라짐)
+let guideEditing = false;
+let guideAskingPw = false;
+let guideDrafts = {};      // 수정 중인 글 {key: text}
+
+function setWorkVisible(show) {
+    document.getElementById('work-main').classList.toggle('hidden-element', !show);
+    document.getElementById('work-result').classList.toggle('hidden-element', !show);
+    document.getElementById('guide-page').classList.toggle('hidden-element', show);
+}
+
+function openGuide(el) {
+    document.querySelectorAll('.area-btn').forEach(b => b.classList.remove('active-main'));
+    el.classList.add('active-main');
+    setWorkVisible(false);
+    renderGuide();
+    if (!guideData) loadGuide();
+}
+
+async function gasGet(params) {
+    const res = await fetch(GAS_WEB_APP_URL + '?' + new URLSearchParams(params));
+    return res.json();
+}
+
+async function gasPost(body) {
+    const res = await fetch(GAS_WEB_APP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
+    return res.json();
+}
+
+async function loadGuide() {
+    const list = document.getElementById('guide-list');
+    list.innerHTML = '<p class="text-sm text-slate-500 p-4">작성요령을 불러오는 중…</p>';
+    try {
+        const res = await gasGet({ action: 'guide' });
+        if (!res.success) throw new Error(res.error);
+        guideData = res.guide;
+        renderGuide();
+    } catch (err) {
+        list.innerHTML = '<div class="p-4 text-sm text-slate-700 leading-relaxed">작성요령을 불러오지 못했어요.<br>서버(code.gs)를 새 버전으로 배포했는지 확인해 주세요.<br><button type="button" class="guide-btn mt-3" onclick="loadGuide()">다시 불러오기</button></div>';
+    }
+}
+
+function showGuideKind(kind) {
+    guideKind = kind;
+    renderGuide();
+}
+
+function escapeHtml(text) {
+    return text.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function renderGuide() {
+    document.querySelectorAll('.guide-switch button').forEach(b => b.classList.toggle('on', b.dataset.guide === guideKind));
+    renderGuideActions();
+    if (!guideData) return;
+
+    const order = guideData.order[guideKind];
+    const other = guideData.order[guideKind === 'behavior' ? 'general' : 'behavior'];
+    const list = document.getElementById('guide-list');
+    list.innerHTML = '';
+    order.forEach((key, idx) => {
+        const part = guideData.parts[key];
+        const text = guideDrafts[key] ?? part.body;
+        const tags = (other.includes(key) ? '<span class="guide-tag">공통</span>' : '')
+            + (part.edited ? '<span class="guide-tag edited">수정됨</span>' : '');
+        const card = document.createElement('div');
+        card.className = 'guide-card' + (idx === 0 ? ' intro' : '');
+        card.innerHTML = `<div class="guide-head">${idx === 0 ? '' : `<span class="guide-num">${idx}</span>`}<span class="guide-title">${escapeHtml(part.title)}</span>${tags}</div>`;
+        if (guideEditing) {
+            const ta = document.createElement('textarea');
+            ta.className = 'guide-edit';
+            ta.value = text;
+            ta.rows = text.split('\n').length + 1;
+            ta.oninput = () => { guideDrafts[key] = ta.value; };
+            card.appendChild(ta);
+        } else {
+            const body = document.createElement('div');
+            body.className = 'guide-body';
+            body.innerHTML = escapeHtml(text).replace(/\{([^{}\n]{1,10})\}/g, '<span class="guide-var">$1</span>');
+            card.appendChild(body);
+        }
+        list.appendChild(card);
+    });
+}
+
+function renderGuideActions() {
+    const box = document.getElementById('guide-actions');
+    if (guideEditing) {
+        box.innerHTML = '<button type="button" class="guide-btn" onclick="resetGuidePart(\'undo\')">한 단계 되돌리기</button>'
+            + '<button type="button" class="guide-btn" onclick="resetGuidePart(\'default\')">처음 지침으로</button>'
+            + '<button type="button" class="guide-btn" onclick="cancelGuideEdit()">취소</button>'
+            + '<button type="button" class="guide-btn dark" onclick="saveGuide()">저장</button>';
+    } else if (guideAskingPw) {
+        box.innerHTML = '<input id="guide-pw" type="password" class="guide-pw" placeholder="관리자 비밀번호" onkeydown="if(event.key===\'Enter\') loginGuide()">'
+            + '<button type="button" class="guide-btn dark" onclick="loginGuide()">확인</button>'
+            + '<button type="button" class="guide-btn" onclick="guideAskingPw=false; renderGuideActions()">취소</button>';
+        document.getElementById('guide-pw').focus();
+    } else {
+        box.innerHTML = guideData ? '<button type="button" class="guide-btn" onclick="guideAskingPw=true; renderGuideActions()">수정</button>' : '';
+    }
+}
+
+function guideServerError(err) {
+    showModal('오류', '서버에 연결하지 못했어요.<br>' + escapeHtml(String(err)), 'error');
+}
+
+async function loginGuide() {
+    const pw = document.getElementById('guide-pw').value;
+    if (!pw) return;
+    try {
+        const res = await gasPost({ action: 'login', password: pw });
+        if (!res.success) return showModal('', res.error || '비밀번호가 틀렸어요.', 'info');
+        guidePw = pw; guideAskingPw = false; guideEditing = true; guideDrafts = {};
+        renderGuide();
+    } catch (err) { guideServerError(err); }
+}
+
+function changedGuideParts() {
+    const changed = {};
+    for (const [key, text] of Object.entries(guideDrafts)) {
+        if (text !== guideData.parts[key].body) changed[key] = text;
+    }
+    return changed;
+}
+
+function cancelGuideEdit() {
+    if (Object.keys(changedGuideParts()).length && !confirm('고친 내용을 저장하지 않고 나갈까요?')) return;
+    guideEditing = false; guideDrafts = {};
+    renderGuide();
+}
+
+async function saveGuide() {
+    const parts = changedGuideParts();
+    if (!Object.keys(parts).length) return showModal('', '바뀐 내용이 없어요.', 'info');
+    try {
+        const res = await gasPost({ action: 'saveGuide', password: guidePw, parts });
+        if (!res.success) return showModal('저장 실패', escapeHtml(res.error || '저장하지 못했어요.'), 'error');
+        guideData = res.guide; guideDrafts = {}; guideEditing = false;
+        renderGuide();
+        showModal('', '저장했어요.<br>지금부터 모든 사용자의 문장 생성에 적용돼요.', 'info');
+    } catch (err) { guideServerError(err); }
+}
+
+// mode: 'undo' = 바로 전 저장 내용으로 / 'default' = 처음 기본 지침으로 (지금 보고 있는 지침의 파트 전체)
+async function resetGuidePart(mode) {
+    const what = mode === 'undo' ? '바로 전에 저장한 내용으로' : '처음 기본 지침으로';
+    if (!confirm(`지금 보고 있는 지침을 ${what} 되돌릴까요?\n'공통' 파트는 다른 지침에도 함께 적용돼요.`)) return;
+    try {
+        const res = await gasPost({ action: 'resetGuide', password: guidePw, mode, keys: guideData.order[guideKind] });
+        if (!res.success) return showModal('되돌리기 실패', escapeHtml(res.error || ''), 'error');
+        guideData = res.guide; guideDrafts = {};
+        renderGuide();
+    } catch (err) { guideServerError(err); }
 }

@@ -93,6 +93,9 @@
             <button class="sidebar-area-btn area-btn" onclick="selArea('행동특성', this)">
                 <i data-lucide="user-pen" aria-hidden="true"></i><span>행동특성 및 종합의견</span>
             </button>
+            <button class="sidebar-area-btn area-btn" onclick="openGuide(this)">
+                <i data-lucide="settings" aria-hidden="true"></i><span>생활기록부 작성요령</span>
+            </button>
         </nav>
         <div class="sidebar-footer mt-auto pt-11 text-center">
             <button type="button" onclick="document.getElementById('privacy-dialog').showModal()" class="relative top-[4px] text-xs font-bold text-slate-300 hover:text-white underline underline-offset-4 rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400">개인정보 처리방침</button>
@@ -101,7 +104,7 @@
     </aside>
 
     <!-- 2. 가운데 영역 (입력 및 생성) -->
-    <main class="min-[1200px]:flex-[0_1_640px] min-[1200px]:min-w-[460px] px-3 pb-3 min-[1200px]:py-6 min-[1200px]:pl-0 min-[1200px]:pr-[7px] flex flex-col min-h-0">
+    <main id="work-main" class="min-[1200px]:flex-[0_1_640px] min-[1200px]:min-w-[460px] px-3 pb-3 min-[1200px]:py-6 min-[1200px]:pl-0 min-[1200px]:pr-[7px] flex flex-col min-h-0">
         <section class="w-full h-full bg-white p-[17px] rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between gap-6 flex-1 min-h-0 overflow-hidden">
 
             <div class="flex flex-col gap-6 flex-1 min-h-0">
@@ -169,7 +172,7 @@
     </main>
 
     <!-- 3. 오른쪽 영역 (생성 결과) -->
-    <section class="flex-1 min-[1200px]:min-w-[500px] px-3 pb-6 min-[1200px]:py-6 min-[1200px]:pr-[19px] min-[1200px]:pl-[5px] flex flex-col gap-6 min-h-0">
+    <section id="work-result" class="flex-1 min-[1200px]:min-w-[500px] px-3 pb-6 min-[1200px]:py-6 min-[1200px]:pr-[19px] min-[1200px]:pl-[5px] flex flex-col gap-6 min-h-0">
         
         <div class="bg-white p-[17px] rounded-2xl shadow-sm border border-slate-200 flex flex-col flex-1 min-h-[520px] min-[1200px]:min-h-0">
             <div class="flex flex-wrap justify-between items-center gap-2 gap-y-3 min-[1200px]:h-[34px] shrink-0 -translate-y-2">
@@ -213,6 +216,21 @@
             
         </div>
 
+    </section>
+
+    <!-- 4. 생활기록부 작성요령 (AI 지침 보기·수정) -->
+    <section id="guide-page" class="hidden-element flex-1 px-3 pb-6 min-[1200px]:py-6 min-[1200px]:pl-0 min-[1200px]:pr-[19px] flex flex-col min-h-0">
+        <div class="bg-white p-[17px] rounded-2xl shadow-sm border border-slate-200 flex flex-col flex-1 min-h-0 gap-4">
+            <div class="flex flex-wrap items-center gap-2">
+                <div class="guide-switch" role="tablist" aria-label="지침 종류">
+                    <button type="button" data-guide="behavior" onclick="showGuideKind('behavior')">행동특성 지침</button>
+                    <button type="button" data-guide="general" onclick="showGuideKind('general')">자율·진로·동아리·과세특 지침</button>
+                </div>
+                <div id="guide-actions" class="ml-auto flex flex-wrap items-center gap-2"></div>
+            </div>
+            <p class="text-[13px] text-slate-600 leading-relaxed">AI에게 이 순서 그대로 전달돼요. <b>번호가 앞설수록 중요</b>하며, 규칙이 서로 부딪히면 앞 번호를 따라요. <span class="guide-var">파란 칸</span>은 문장을 만들 때 실제 값으로 바뀌어요.</p>
+            <div id="guide-list" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col gap-3 pr-1"></div>
+        </div>
     </section>
 
     <script src="js/app.js"></script>

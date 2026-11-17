@@ -108,3 +108,24 @@ td.excel-byte { background-color: #f1f5f9; padding: 12px 8px !important; }
 .result-head-table th:last-child { border-top-right-radius: 11px; }
 #result-tbody tr:last-child td:last-child { border-bottom-right-radius: 11px; }
 .result-cell { background-color: #ffffff; }
+
+/* 생활기록부 작성요령 페이지 */
+.guide-switch { display: inline-flex; background: #f1f5f9; border-radius: 12px; padding: 3px; gap: 2px; }
+.guide-switch button { padding: 7px 14px; border-radius: 9px; font-size: 13px; font-weight: 700; color: #64748b; transition: background-color .2s, color .2s; }
+.guide-switch button.on { background: #334155; color: #fff; }
+.guide-card { flex-shrink: 0; border: 1px solid #cbd5e1; border-radius: 12px; background: #fff; overflow: hidden; }
+.guide-card.intro { background: #f8fafc; }
+.guide-head { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid #e2e8f0; }
+.guide-num { width: 22px; height: 22px; border-radius: 50%; background: #334155; color: #fff; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.guide-title { font-size: 14px; font-weight: 700; color: #1e293b; }
+.guide-tag { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 99px; background: #f1f5f9; color: #475569; }
+.guide-tag.edited { background: #fef3c7; color: #92400e; }
+.guide-body { padding: 12px 14px; font-size: 14px; line-height: 1.75; color: #334155; white-space: pre-wrap; word-break: keep-all; overflow-wrap: anywhere; }
+.guide-edit { display: block; width: 100%; padding: 12px 14px; font-size: 14px; line-height: 1.75; color: #1e293b; border: 0; resize: vertical; min-height: 120px; background: #fffbeb; }
+.guide-edit:focus { outline: none; background: #fff; box-shadow: inset 0 0 0 2px #334155; }
+.guide-var { display: inline-block; padding: 0 6px; border-radius: 6px; background: #dbeafe; color: #1e40af; font-weight: 700; font-size: 13px; }
+.guide-btn { height: 32px; padding: 0 12px; border-radius: 10px; font-size: 13px; font-weight: 700; border: 1px solid #cbd5e1; background: #fff; color: #334155; }
+.guide-btn.dark { background: #334155; border-color: #334155; color: #fff; }
+.guide-btn:hover { filter: brightness(0.96); }
+.guide-pw { height: 32px; width: 140px; padding: 0 10px; border: 1px solid #94a3b8; border-radius: 10px; font-size: 13px; }
+.guide-pw:focus { outline: none; border-color: #334155; }
