@@ -5,7 +5,7 @@ const keywordDB = {
     '행동특성': { 
         pos: {
             '학교생활': ['규칙준수', '근면성실', '책임감'],
-            '교우관계': ['친화력', '배려심', '리더십'],
+            '교우관계': ['친화력', '배려심', '지도력'],
             '인성태도': ['차분함', '인내심', '겸손함']
         },
         neg: {
@@ -143,6 +143,7 @@ function showModal(title, msg, type = 'info') {
 function closeModal() { document.getElementById('custom-modal').classList.add('hidden-element'); }
 
 function translateError(errStr) {
+    if (errStr.includes('지침이 아직 없어요')) return '관리자가 아직 지침을 저장하지 않았어요.<br>관리자에게 문의해 주세요.';
     const err = errStr.toLowerCase();
     if(err.includes("quota") || err.includes("429")) return "일일 AI 사용량을 초과했거나 요청이 너무 많습니다.<br>잠시 후 다시 시도해주세요.";
     if(err.includes("network") || err.includes("통신 실패") || err.includes("fetch") || err.includes("failed to fetch")) return "GAS API 통신에 실패했습니다.<br>GAS 웹앱 URL 설정 및 네트워크 상태를 확인해주세요.";
@@ -514,6 +515,7 @@ function exportExcel(tableId, fileName) {
 // ─────────────────────────────────────────────────────────────
 let guideData = null;      // { parts: {key: {title, body}}, order: {behavior: [...], general: [...]} }
 let guideKind = 'behavior';
+let guideFromDefault = false; // 서버에 지침이 없어 처음 지침을 보여 주는 중
 let guidePw = null;        // 관리자 비밀번호 (새로고침하면 사라짐)
 let guideEditing = false;
 let guideDrafts = {};      // 수정 중인 글 {key: text}
@@ -550,7 +552,8 @@ async function loadGuide() {
     try {
         const res = await gasGet({ action: 'guide' });
         if (!res.success) throw new Error(res.error);
-        guideData = res.guide;
+        guideFromDefault = !res.guide;
+        guideData = res.guide || JSON.parse(JSON.stringify(GUIDE_DEFAULT));
         renderGuide();
     } catch (err) {
         list.innerHTML = '<div class="p-4 text-sm text-slate-700 leading-relaxed">프롬프트를 불러오지 못했어요.<br>서버(code.gs)를 새 버전으로 배포했는지 확인해 주세요.<br><button type="button" class="guide-btn mt-3" onclick="loadGuide()">다시 불러오기</button></div>';
@@ -558,8 +561,88 @@ async function loadGuide() {
 }
 
 function showGuideKind(kind) {
+    if (guideEditing && kind === 'settings' && Object.keys(changedGuideParts()).length && !confirm('고친 지침을 저장하지 않고 나갈까요?')) return;
+    if (kind === 'settings') { guideEditing = false; guideDrafts = {}; }
     guideKind = kind;
     renderGuide();
+    if (kind === 'settings' && !settingsData) loadSettings();
+}
+
+// ── API 설정 (모델·키). 키는 서버가 앞뒤 4글자만 보여 줌
+let settingsData = null;      // { model, defaultModel, keys: ['AIza…abcd', ...] }
+let settingsRemoved = new Set(); // 지울 기존 키 번호
+let settingsAdded = [];       // 새로 넣을 키
+const MODEL_SUGGESTIONS = ['gemini-flash-lite-latest', 'gemini-flash-latest', 'gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-3.5-pro'];
+
+async function loadSettings() {
+    document.getElementById('guide-list').innerHTML = '<p class="text-sm text-slate-500 p-4">설정을 불러오는 중…</p>';
+    try {
+        const res = await gasPost({ action: 'getSettings', password: guidePw });
+        if (!res.success) throw new Error(res.error);
+        setSettings(res);
+    } catch (err) {
+        document.getElementById('guide-list').innerHTML = '<div class="p-4 text-sm text-slate-700">설정을 불러오지 못했어요.<br><button type="button" class="guide-btn mt-3" onclick="loadSettings()">다시 불러오기</button></div>';
+    }
+}
+
+function setSettings(res) {
+    settingsData = { model: res.model, defaultModel: res.defaultModel, keys: res.keys };
+    settingsRemoved = new Set(); settingsAdded = [];
+    renderGuide();
+}
+
+function renderSettings() {
+    const list = document.getElementById('guide-list');
+    if (!settingsData) return;
+    const keyRows = settingsData.keys.map((k, i) => {
+        const off = settingsRemoved.has(i);
+        return `<div class="set-key${off ? ' off' : ''}"><span>${escapeHtml(k)}</span><button type="button" class="guide-btn" onclick="toggleKeyRemove(${i})">${off ? '되살리기' : '삭제'}</button></div>`;
+    }).join('') + settingsAdded.map((k, i) => `<div class="set-key new"><span>${escapeHtml(k.slice(0, 4) + '…' + k.slice(-4))} <b>새 키</b></span><button type="button" class="guide-btn" onclick="settingsAdded.splice(${i},1); renderSettings()">빼기</button></div>`).join('');
+    list.innerHTML = `
+        <div class="guide-card"><div class="guide-head"><span class="guide-title">AI 모델</span></div>
+            <div class="guide-body set-body">
+                <input id="set-model" class="set-input" list="set-model-list" placeholder="${escapeHtml(settingsData.defaultModel)}" value="${escapeHtml(settingsData.model)}">
+                <datalist id="set-model-list">${MODEL_SUGGESTIONS.map(m => `<option value="${m}">`).join('')}</datalist>
+                <p class="set-hint">비워 두면 기본 모델(${escapeHtml(settingsData.defaultModel)})을 써요. 기본 모델은 구글이 늘 최신 Flash-Lite로 이어 줘요. 적은 모델이 없어지면 기본 모델로 자동으로 바꿔 시도해요.</p>
+            </div></div>
+        <div class="guide-card"><div class="guide-head"><span class="guide-title">API 키</span><span class="guide-tag">${settingsData.keys.length - settingsRemoved.size + settingsAdded.length}개 사용</span></div>
+            <div class="guide-body set-body">
+                ${keyRows || '<p class="set-hint">등록된 키가 없어요.</p>'}
+                <div class="set-add"><input id="set-newkey" class="set-input" type="password" placeholder="새 API 키 붙여 넣기" onkeydown="if(event.key==='Enter') addSettingKey()"><button type="button" class="guide-btn" onclick="addSettingKey()">추가</button></div>
+                <p class="set-hint">키는 앞뒤 4글자만 보여요. 키가 여러 개면 돌아가며 쓰고, 하나가 막히면 다음 키로 넘어가요. [설정 저장]을 눌러야 적용돼요.</p>
+            </div></div>`;
+}
+
+function toggleKeyRemove(i) {
+    keepModelDraft();
+    settingsRemoved.has(i) ? settingsRemoved.delete(i) : settingsRemoved.add(i);
+    renderSettings();
+}
+
+function addSettingKey() {
+    keepModelDraft();
+    const input = document.getElementById('set-newkey');
+    const key = input.value.trim();
+    if (!key) return;
+    settingsAdded.push(key);
+    renderSettings();
+}
+
+// 다시 그릴 때 입력 중인 모델 이름이 사라지지 않게
+function keepModelDraft() {
+    const m = document.getElementById('set-model');
+    if (m) settingsData.model = m.value.trim();
+}
+
+async function saveSettings() {
+    keepModelDraft();
+    const keep = settingsData.keys.map((_, i) => i).filter(i => !settingsRemoved.has(i));
+    try {
+        const res = await gasPost({ action: 'saveSettings', password: guidePw, model: settingsData.model, keep, add: settingsAdded });
+        if (!res.success) return showModal('저장 실패', escapeHtml(res.error || '저장하지 못했어요.'), 'error');
+        setSettings(res);
+        showModal('', '설정을 저장했어요.<br>지금부터 문장 생성에 적용돼요.', 'info');
+    } catch (err) { guideServerError(err); }
 }
 
 function escapeHtml(text) {
@@ -569,12 +652,15 @@ function escapeHtml(text) {
 function renderGuide() {
     document.querySelectorAll('.guide-switch button').forEach(b => b.classList.toggle('on', b.dataset.guide === guideKind));
     renderGuideActions();
+    if (guideKind === 'settings') return renderSettings();
     if (!guideData) return;
 
     const order = guideData.order[guideKind];
     const other = guideData.order[guideKind === 'behavior' ? 'general' : 'behavior'];
     const list = document.getElementById('guide-list');
-    list.innerHTML = '';
+    list.innerHTML = guideFromDefault
+        ? '<div class="guide-notice">서버에 아직 지침이 없어서 처음 지침을 보여 드려요. [수정] → [저장]을 누르면 서버에 저장되고 문장 생성에 쓰여요.</div>'
+        : '';
     order.forEach((key, idx) => {
         const part = guideData.parts[key];
         const text = guideDrafts[key] ?? part.body;
@@ -601,7 +687,9 @@ function renderGuide() {
 
 function renderGuideActions() {
     const box = document.getElementById('guide-actions');
-    if (guideEditing) {
+    if (guideKind === 'settings') {
+        box.innerHTML = settingsData ? '<button type="button" class="guide-btn dark" onclick="saveSettings()">설정 저장</button>' : '';
+    } else if (guideEditing) {
         box.innerHTML = '<button type="button" class="guide-btn" onclick="cancelGuideEdit()">취소</button>'
             + '<button type="button" class="guide-btn dark" onclick="saveGuide()">저장</button>';
     } else {
@@ -649,12 +737,14 @@ function cancelGuideEdit() {
 }
 
 async function saveGuide() {
-    const parts = changedGuideParts();
-    if (!Object.keys(parts).length) return showModal('', '바뀐 내용이 없어요.', 'info');
+    const changed = changedGuideParts();
+    if (!Object.keys(changed).length && !guideFromDefault) return showModal('', '바뀐 내용이 없어요.', 'info');
+    const parts = {};
+    for (const [key, part] of Object.entries(guideData.parts)) parts[key] = { title: part.title, body: changed[key] ?? part.body };
     try {
-        const res = await gasPost({ action: 'saveGuide', password: guidePw, parts });
+        const res = await gasPost({ action: 'saveGuide', password: guidePw, guide: { parts, order: guideData.order } });
         if (!res.success) return showModal('저장 실패', escapeHtml(res.error || '저장하지 못했어요.'), 'error');
-        guideData = res.guide; guideDrafts = {}; guideEditing = false;
+        guideData = res.guide; guideDrafts = {}; guideEditing = false; guideFromDefault = false;
         renderGuide();
         showModal('', '저장했어요.<br>지금부터 모든 사용자의 문장 생성에 적용돼요.', 'info');
     } catch (err) { guideServerError(err); }

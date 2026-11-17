@@ -1,20 +1,25 @@
 // ─────────────────────────────────────────────────────────────
-// 스크립트 속성(비밀 금고)에 넣어 둘 값  ※ 코드와 GitHub에는 절대 적지 않음
-//   GEMINI_KEYS     : API 키들을 쉼표로 이어서  (예: 키1,키2,키3)
-//   ADMIN_PASSWORD  : 프롬프트 수정용 관리자 비밀번호
-//   GUIDE_<파트이름> : 관리자가 고친 지침 (자동 저장됨, 직접 넣을 필요 없음)
+// 스크립트 속성(비밀 금고)에 들어 있는 값  ※ 코드와 GitHub에는 절대 적지 않음
+//   GEMINI_KEYS       : API 키들을 쉼표로 이어서  (예: 키1,키2,키3)   ← 관리자 페이지에서도 관리
+//   GEMINI_MODEL      : 사용할 Gemini 모델 이름 (없으면 기본 모델)     ← 관리자 페이지에서 관리
+//   ADMIN_PASSWORD    : 관리자 비밀번호                               ← 직접 넣음
+//   GUIDE_ORDER       : 지침 파트 순서                              ← 관리자 페이지에서 저장
+//   GUIDE_PART_<이름> : 지침 파트 하나 (제목·내용)                   ← 관리자 페이지에서 저장
+// 생활기록부 지침(프롬프트)은 이 코드에 없음. 관리자 페이지에서만 고치고 금고에 저장됨.
 // ─────────────────────────────────────────────────────────────
 const PROPS = PropertiesService.getScriptProperties();
-const GUIDE_MAX_LEN = 3000; // 파트 하나의 최대 글자 수 (속성 한 칸 9KB 한도 안쪽)
+const GUIDE_MAX_LEN = 2500; // 파트 하나의 최대 글자 수 (속성 한 칸 9KB 한도 안쪽)
+const NO_GUIDE_MSG = '지침이 아직 없어요. 관리자 페이지에서 지침을 저장해 주세요.';
+const DEFAULT_MODEL = 'gemini-flash-lite-latest'; // 구글이 늘 최신 Flash-Lite로 연결해 주는 이름
 
 function jsonOut(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
 
-// 화면이 프롬프트를 읽어 갈 때: ?action=guide
+// 화면이 프롬프트를 읽어 갈 때: ?action=guide  (아직 없으면 guide: null)
 function doGet(e) {
   if (e && e.parameter && e.parameter.action === 'guide') {
-    return jsonOut({ success: true, guide: guideForView() });
+    return jsonOut({ success: true, guide: loadGuide() });
   }
   return HtmlService.createHtmlOutput('스마트 생기부 작성기 API 서버가 정상 작동 중입니다.');
 }
@@ -25,6 +30,8 @@ function doPost(e) {
     switch (data.action) {
       case 'login':     return jsonOut(checkPassword(data.password) ? { success: true } : { success: false, error: '비밀번호가 틀렸어요.' });
       case 'saveGuide': return jsonOut(saveGuide(data));
+      case 'getSettings':  return jsonOut(getSettings(data));
+      case 'saveSettings': return jsonOut(saveSettings(data));
       default:          return jsonOut(generateRecordFromAI(data));
     }
   } catch (error) {
@@ -37,155 +44,82 @@ function checkPassword(pw) {
   return !!real && pw === real;
 }
 
-// 기본 지침 위에 관리자가 고친 내용을 덮어씌운 현재 지침
-function currentParts() {
+// ── API 키·모델 설정 (키는 화면에 앞뒤 4글자만 보여 주고 전체는 절대 내보내지 않음)
+function readKeys() {
+  return (PROPS.getProperty('GEMINI_KEYS') || '').split(',').map(k => k.trim()).filter(Boolean);
+}
+
+function maskKey(key) {
+  return key.length <= 10 ? '****' : key.slice(0, 4) + '…' + key.slice(-4);
+}
+
+function getSettings(data) {
+  if (!checkPassword(data.password)) return { success: false, error: '비밀번호가 틀렸어요.' };
+  return { success: true, model: PROPS.getProperty('GEMINI_MODEL') || '', defaultModel: DEFAULT_MODEL, keys: readKeys().map(maskKey) };
+}
+
+// keep: 남길 기존 키 번호들, add: 새로 넣을 키들, model: 모델 이름(빈칸이면 기본 모델)
+function saveSettings(data) {
+  if (!checkPassword(data.password)) return { success: false, error: '비밀번호가 틀렸어요.' };
+  const old = readKeys();
+  const keep = (data.keep || []).filter(i => Number.isInteger(i) && i >= 0 && i < old.length).map(i => old[i]);
+  const add = (data.add || []).map(k => String(k).trim()).filter(Boolean);
+  if (add.some(k => /[\s,]/.test(k) || k.length < 20 || k.length > 200)) return { success: false, error: '키 모양이 이상해요. 띄어쓰기나 쉼표 없이 키 전체를 넣어 주세요.' };
+  const keys = [...new Set(keep.concat(add))];
+  if (!keys.length) return { success: false, error: 'API 키가 하나는 있어야 해요.' };
+  const model = String(data.model || '').trim();
+  if (model && !/^[A-Za-z0-9._\-]{3,80}$/.test(model)) return { success: false, error: '모델 이름이 올바르지 않아요.' };
+  PROPS.setProperty('GEMINI_KEYS', keys.join(','));
+  if (model) PROPS.setProperty('GEMINI_MODEL', model); else PROPS.deleteProperty('GEMINI_MODEL');
+  return getSettings(data);
+}
+
+// 금고에서 지침 전체를 꺼냄. 없으면 null
+function loadGuide() {
   const saved = PROPS.getProperties();
+  if (!saved.GUIDE_ORDER) return null;
+  const order = JSON.parse(saved.GUIDE_ORDER);
   const parts = {};
-  Object.keys(GUIDE_PARTS).forEach(key => {
-    const custom = saved['GUIDE_' + key];
-    parts[key] = { title: GUIDE_PARTS[key].title, body: custom || GUIDE_PARTS[key].body };
+  Object.keys(saved).forEach(k => {
+    if (k.indexOf('GUIDE_PART_') === 0) parts[k.slice('GUIDE_PART_'.length)] = JSON.parse(saved[k]);
   });
-  return parts;
+  return { parts, order };
 }
 
-function guideForView() {
-  return { parts: currentParts(), order: GUIDE_ORDER };
-}
-
-// 바뀐 파트만 저장. 기본 지침과 같아지면 저장 칸을 비워 기본 지침을 그대로 씀
+// 관리자 페이지가 보낸 지침 전체를 검사한 뒤 금고에 통째로 저장 (예전 지침 칸은 지움)
 function saveGuide(data) {
   if (!checkPassword(data.password)) return { success: false, error: '비밀번호가 틀렸어요.' };
-  const changes = data.parts || {};
-  const now = currentParts();
-  const toSave = {};
-  const toDelete = [];
-  for (const key of Object.keys(changes)) {
-    if (!GUIDE_PARTS[key]) return { success: false, error: '알 수 없는 파트: ' + key };
-    const body = String(changes[key]).trim();
-    if (!body) return { success: false, error: `'${GUIDE_PARTS[key].title}' 내용이 비어 있어요.` };
-    if (body.length > GUIDE_MAX_LEN) return { success: false, error: `'${GUIDE_PARTS[key].title}'이 너무 길어요. (${GUIDE_MAX_LEN}자 이하)` };
-    if (body === now[key].body) continue;
-    if (body === GUIDE_PARTS[key].body) toDelete.push('GUIDE_' + key);
-    else toSave['GUIDE_' + key] = body;
+  const guide = data.guide || {};
+  const parts = guide.parts || {};
+  const order = guide.order || {};
+  if (!Array.isArray(order.behavior) || !Array.isArray(order.general) || !order.behavior.length || !order.general.length) {
+    return { success: false, error: '지침 순서가 올바르지 않아요.' };
   }
+  const used = order.behavior.concat(order.general);
+  for (const key of used) {
+    const part = parts[key];
+    if (!/^[a-z_]{1,40}$/.test(key) || !part) return { success: false, error: '알 수 없는 파트: ' + key };
+    const title = String(part.title || '').trim();
+    const body = String(part.body || '').trim();
+    if (!title || !body) return { success: false, error: `'${title || key}' 내용이 비어 있어요.` };
+    if (body.length > GUIDE_MAX_LEN) return { success: false, error: `'${title}'이 너무 길어요. (${GUIDE_MAX_LEN}자 이하)` };
+    parts[key] = { title, body };
+  }
+  const toSave = { GUIDE_ORDER: JSON.stringify({ behavior: order.behavior, general: order.general }) };
+  used.forEach(key => { toSave['GUIDE_PART_' + key] = JSON.stringify(parts[key]); });
+  Object.keys(PROPS.getProperties()).forEach(k => {
+    if (k.indexOf('GUIDE_') === 0 && !(k in toSave)) PROPS.deleteProperty(k);
+  });
   PROPS.setProperties(toSave);
-  toDelete.forEach(k => PROPS.deleteProperty(k));
-  return { success: true, guide: guideForView() };
+  return { success: true, guide: loadGuide() };
 }
 
-// ─────────────────────────────────────────────────────────────
-// 생활기록부 작성요령 (AI에게 보내는 지침)
-// - 지침은 '행동특성용'과 '공용(자율·진로·동아리·과세특)' 두 가지
-// - 각 지침은 파트 목록이며, 위에 있는 파트일수록 중요함 (규칙이 부딪히면 앞 번호 우선)
-// - {중괄호} 자리는 생성할 때 실제 값으로 바뀜 ({생성 글자 수}·{생성 문단 개수}는 화면 옵션 값, {최소 글자 수}는 그 85%)
-// ─────────────────────────────────────────────────────────────
-const GUIDE_PARTS = {
-  intro_behavior: {
-    title: '작업 설명 (행동특성)',
-    body: `대한민국 중학교 학교생활기록부에 들어갈 문장을 작성하는 작업입니다.
-2026학년도 학교생활기록부 기재요령에 맞게, 아래 자료를 바탕으로 '행동특성 및 종합의견' 문단 {생성 문단 개수}개를 작성하세요.
-문단 하나는 번호 하나에 해당하며, 여러 문장으로 이루어질 수 있습니다.
-
-[학생 자료]
-- 좋은 태도(강조할 점): {좋은태도}
-- 아쉬운 태도(드러내되 순화할 점): {아쉬운태도}
-- 교사 관찰 메모(한 학생에 대한 여러 관찰):
-{입력내용}`
-  },
-  intro_general: {
-    title: '작업 설명 (자율·진로·동아리·과세특)',
-    body: `대한민국 중학교 학교생활기록부에 들어갈 문장을 작성하는 작업입니다.
-2026학년도 학교생활기록부 기재요령에 맞게, 아래 자료를 바탕으로 '{영역}' 영역에 바로 복사해서 쓸 수 있는 서로 다른 특기사항 문단 {생성 문단 개수}개를 작성하세요.
-문단 하나는 번호 하나에 해당하는 특기사항 한 덩어리이며, 여러 문장으로 이루어집니다.
-
-[입력 자료]
-- 영역: {영역}
-- 과목 및 동아리명: {과목}
-- 교사가 진행한 활동 및 학습 내용 전체:
-{입력내용}`
-  },
-  forbidden: {
-    title: '기재 금지',
-    body: `어기면 쓸 수 없는 문장이 되므로 가장 먼저 지킬 것.
-- 학생 이름, 1인칭(나, 저), 가족·친인척 관련 내용, 부모의 사회경제적 지위
-- 학교명, 학교 별칭, 특정 대학명, 기관명, 상호명, 강사명, 재단명, 축제명
-- 대회명, 수상 실적, 자격증, 논문, 어학·인증시험 점수, 모의고사·전국연합학력평가 성적, 해외활동
-- 도서 출간, 특허, 장학생·장학금, 방과후학교 활동
-- 특수기호(★, ▶, ■ 등), 괄호, 따옴표, 마크다운 기호
-- 불필요한 영어 약칭과 무분별한 외래어`
-  },
-  core_behavior: {
-    title: '태도 반영 (행동특성 핵심)',
-    body: `- 좋은 태도는 관찰 메모 속 구체적인 행동과 연결하여 강조할 것.
-- 아쉬운 태도가 주어지면 숨기지 말고 드러낼 것. 다만 단어를 낙인처럼 그대로 쓰지 말고, 실제 모습과 나아지려는 노력의 과정으로 표현한 뒤 앞으로의 발전 기대로 마무리할 것.
-- 예: 소극적 → 처음에는 발표를 망설였으나 점차 자기 생각을 말하려 노력하며, 자신감을 키워 간다면 더 큰 성장이 기대됨.
-- 아쉬운 태도는 모든 문단에 넣지 말고 일부 문단에만 자연스럽게 반영할 것.`
-  },
-  core_general: {
-    title: '활동 분리 (자율·진로·동아리·과세특 핵심)',
-    body: `- 각 문단에는 입력된 활동을 빠짐없이 모두 담을 것. 활동 하나만 쓰고 끝내지 말 것.
-- 문단 안에서 서로 다른 활동은 한 문장 안에 엮지 말고, 활동마다 따로 문장을 써서 나란히 놓을 것. 분량이 모자라도 엮지 말 것.
-- 활동 문장끼리 이어서, 이후, 그리고, 또한 같은 연결어로 잇지 말 것.
-- 한 문단 안에서 각 활동에 비슷한 분량을 나눌 것.
-- 같은 활동이라도 학업 역량, 협력·소통, 진로 연계, 문제 해결, 성실성 등 서로 다른 태도와 배운 점을 담아 문단마다 다르게 쓰고, 모든 문단이 첫 번째 활동부터 시작하지 않게 할 것.
-- 좋은 예 (활동 2개가 모두 담긴 문단 하나, 구조만 참고하고 분량은 분량 규칙을 따를 것):
-  학급 회장 선거에 입후보하여 공약을 준비하고 발표하는 과정에서 뛰어난 소통 능력과 책임감을 보임. 생명존중교육에 진지한 태도로 참여하여 배운 점을 일상에서 실천하려는 모습이 돋보임.
-- 나쁜 예 1, 한 문장에 섞음: 정부반장선거에 참여하여 소통 능력을 보였으며 생명존중교육에도 성실히 참여함.
-- 나쁜 예 2, 연결어로 이음: 정부반장선거에 참여하여 소통 능력을 보임. 이어 생명존중교육에도 성실히 참여함.
-- 나쁜 예 3, 지나치게 쪼갬: 정부반장선거에 입후보함. 공약을 발표함. 투표의 소중함을 일깨움. 생명존중교육에 참여함.`
-  },
-  style: {
-    title: '문체',
-    body: `- 문장 끝은 명사형 현재(~함, ~임, ~됨, ~보임, ~나타냄)로 맺을 것.
-- 문장 끝을 과거형(~했음, ~하였음, ~였음, ~했다)이나 ~합니다로 맺지 말 것. 문장 중간의 과거형(~했으며, ~했고, ~였으나)은 자연스러우면 써도 됨.
-- 문장을 '학생은', '이 학생은', '본 학생은'으로 시작하지 말고 곧바로 행동이나 특성으로 시작할 것.
-- 문장을 중간에 끊지 말고 마침표(.)로 끝나는 완결된 문장으로 쓸 것.`
-  },
-  content: {
-    title: '내용 원칙',
-    body: `- 실제 관찰 가능한 행동과 사실 중심으로 쓸 것. 탁월한, 훌륭한, 완벽한 같은 과도한 꾸밈말은 피하되 뛰어난, 돋보임 정도는 써도 됨.
-- 활동을 나열하지 말고 참여도, 맡은 역할, 협력 모습 등 학생만의 특성이 드러나게 쓸 것.
-- 입력에 횟수나 시간 같은 수치가 있으면 구체적인 수치로 쓸 것.
-- 결과만 적지 말고 과정에서 보인 행동의 변화와 성장의 흐름을 담을 것.
-- 학생을 깎아내리는 단정은 하지 말 것.
-- 교사가 직접 관찰하고 쓴 것처럼 자연스럽고 생생하게 쓰고, 관료적인 표현은 피할 것.`
-  },
-  length: {
-    title: '분량',
-    body: `- 각 문단(번호 하나)은 공백 포함 {생성 글자 수}자를 넘지 않되 {최소 글자 수}자 이상 채울 것. {생성 글자 수}자는 넘으면 안 되는 한도임.
-- 여러 문단의 합이 아니라 문단 하나하나의 분량임. 모자라면 구체적 행동·맥락·역할·수치·성장 과정을 더 자세히 쓸 것.
-- 단, 분량보다 위의 규칙이 우선임.`
-  },
-  format: {
-    title: '출력 형식',
-    body: `- 1번부터 {생성 문단 개수}번까지 "1. ", "2. "처럼 숫자, 마침표, 띄어쓰기로 시작하여 서로 다른 문단 정확히 {생성 문단 개수}개를 출력할 것. 문단 하나는 줄을 바꾸지 말고 한 줄로 쓸 것.
-- 번호 붙은 문단 외에 다른 말은 출력하지 말 것.`
-  },
-  check_behavior: {
-    title: '마지막 점검 (행동특성)',
-    body: `가장 자주 틀리는 부분이니 출력 전에 반드시 다시 확인할 것.
-- 문장 끝이 ~했음, ~하였음, ~였음처럼 과거형이면 ~함, ~임처럼 현재형으로 고칠 것.`
-  },
-  check_general: {
-    title: '마지막 점검 (자율·진로·동아리·과세특)',
-    body: `가장 자주 틀리는 부분이니 출력 전에 반드시 다시 확인할 것.
-- 문장 끝이 ~했음, ~하였음, ~였음처럼 과거형이면 ~함, ~임처럼 현재형으로 고칠 것.
-- 각 문단에 입력된 활동이 모두 들어 있는지 확인하고, 빠진 활동이 있으면 채울 것.
-- 서로 다른 활동 두 개가 한 문장 안에 엮여 있으면 두 문장으로 나눌 것.`
-  }
-};
-
-// 지침별 파트 순서 (작업 설명 다음부터 중요한 순서)
-const GUIDE_ORDER = {
-  behavior: ['intro_behavior', 'forbidden', 'core_behavior', 'style', 'content', 'length', 'format', 'check_behavior'],
-  general:  ['intro_general',  'forbidden', 'core_general',  'style', 'content', 'length', 'format', 'check_general']
-};
-
-// 학생 자료로 {빈칸}을 채워 AI에게 보낼 지침 글을 만든다
+// 금고의 지침에 학생 자료를 채워 AI에게 보낼 글을 만든다. 지침이 없으면 null
 function buildPrompt(data) {
-  const P = currentParts();
-  const isBehavior = data.area === '행동특성';
-  const order = GUIDE_ORDER[isBehavior ? 'behavior' : 'general'];
+  const guide = loadGuide();
+  if (!guide) return null;
+  const P = guide.parts;
+  const order = guide.order[data.area === '행동특성' ? 'behavior' : 'general'];
   const [introKey, ...ruleKeys] = order;
   const rules = ruleKeys.map((key, i) => `${i + 1}. ${P[key].title}\n${P[key].body}`).join('\n\n');
   const text = `${P[introKey].body}
@@ -211,7 +145,7 @@ ${rules}`;
 
 function generateRecordFromAI(data) {
   // API 키는 스크립트 속성 GEMINI_KEYS 에서 읽음 (쉼표로 구분)
-  const validApiKeys = (PROPS.getProperty('GEMINI_KEYS') || '').split(',').map(k => k.trim()).filter(Boolean);
+  const validApiKeys = readKeys();
 
   if (validApiKeys.length === 0) {
     return { success: false, error: "등록된 API 키가 없습니다. 스크립트 속성 GEMINI_KEYS를 확인하세요." };
@@ -229,6 +163,7 @@ function generateRecordFromAI(data) {
   cache.put("last_api_key_index", startIndex.toString(), 21600); // 6시간 캐싱
 
   const systemPrompt = buildPrompt(data);
+  if (!systemPrompt) return { success: false, error: NO_GUIDE_MSG };
 
   const payload = {
     "contents": [{
@@ -255,8 +190,8 @@ function generateRecordFromAI(data) {
     muteHttpExceptions: true
   };
 
-  // 요청 모델 결정: 클라이언트 지정 모델 -> gemini-flash-lite-latest(영구 최신 유지) -> gemini-3.5-flash-lite
-  let modelName = (data && data.model) ? data.model : "gemini-flash-lite-latest";
+  // 모델: 관리자 페이지에서 정한 모델 → 없으면 기본 모델. 정한 모델이 사라졌으면 기본 모델로 한 번 다시 시도
+  let modelName = PROPS.getProperty('GEMINI_MODEL') || DEFAULT_MODEL;
 
   // Failover Loop: 사용 가능한 키 개수만큼 시도
   let lastError = "";
@@ -268,7 +203,7 @@ function generateRecordFromAI(data) {
     options.headers = {
       "x-goog-api-key": selectedApiKey
     };
-    let apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":generateContent?key=" + selectedApiKey;
+    let apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":generateContent"; // 키는 머리글로만 보냄
 
     try {
       console.log(`Gemini API 호출 시도 - Model: ${modelName}, API Key Index: ${currentIndex}`);
@@ -278,12 +213,12 @@ function generateRecordFromAI(data) {
       let json = JSON.parse(contentText);
 
       // 모델 지원 종료 또는 404 감지 시 안정 대체 모델로 1회 즉시 재시도
-      if (responseCode === 404 || (json.error && (json.error.message.includes("no longer available") || json.error.message.includes("not found")))) {
-        const fallbackModel = (modelName !== "gemini-flash-lite-latest") ? "gemini-flash-lite-latest" : "gemini-3.5-flash-lite";
-        if (modelName !== fallbackModel) {
-          console.warn(`모델(${modelName}) 지원 불가 감지됨. 대체 모델(${fallbackModel})로 전환하여 재시도합니다.`);
-          modelName = fallbackModel;
-          apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":generateContent?key=" + selectedApiKey;
+      const errMsg = (json.error && json.error.message) || '';
+      if (responseCode === 404 || errMsg.includes("no longer available") || errMsg.includes("not found")) {
+        if (modelName !== DEFAULT_MODEL) {
+          console.warn(`모델(${modelName}) 지원 불가 감지됨. 기본 모델(${DEFAULT_MODEL})로 전환하여 재시도합니다.`);
+          modelName = DEFAULT_MODEL;
+          apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":generateContent";
           response = UrlFetchApp.fetch(apiUrl, options);
           responseCode = response.getResponseCode();
           contentText = response.getContentText();

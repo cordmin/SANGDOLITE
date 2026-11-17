@@ -141,3 +141,13 @@ td.excel-byte { background-color: #f1f5f9; padding: 12px 8px !important; }
 /* 결과 표가 칸 높이를 끝까지 채우도록 (휴대폰처럼 높이가 % 로 안 잡힐 때 대비) */
 #result-scroll { display: flex; flex-direction: column; }
 #result-scroll > #result-table { flex: 1 0 auto; }
+.guide-notice { flex-shrink: 0; padding: 10px 14px; border-radius: 10px; background: #fef3c7; color: #92400e; font-size: 13px; font-weight: 600; line-height: 1.6; }
+.set-input { width: 100%; height: 36px; padding: 0 12px; border: 1px solid #94a3b8; border-radius: 9px; font-size: 14px; color: #0f172a; background: #fff; }
+.set-input:focus { outline: none; border-color: #334155; }
+.set-hint { margin-top: 8px; font-size: 12px; color: #64748b; line-height: 1.6; }
+.set-key { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-family: ui-monospace, monospace; font-size: 13px; }
+.set-key.off span { text-decoration: line-through; color: #94a3b8; }
+.set-key.new b { font-family: 'Pretendard', sans-serif; font-size: 11px; color: #166534; background: #dcfce7; padding: 1px 6px; border-radius: 99px; }
+.set-add { display: flex; gap: 6px; margin-top: 10px; }
+.set-body { white-space: normal; }
+.set-add .guide-btn, .set-key .guide-btn { flex-shrink: 0; white-space: nowrap; }
