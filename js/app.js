@@ -519,7 +519,7 @@ let guideFromDefault = false; // 서버에 지침이 없어 처음 지침을 보
 let guidePw = null;        // 관리자 비밀번호 (새로고침하면 사라짐)
 let guideEditing = false;
 let guideDrafts = {};      // 수정 중인 글 {key: text}
-const GUIDE_VAR_LABELS = { '최소 글자 수': '최소 글자 수 = 생성 글자 수의 85%' }; // 파란 칸에 덧붙일 설명
+const GUIDE_VAR_LABELS = { '생성 문단 개수': '생성 문장 개수', '최소 글자 수': '최소 글자 수 = 생성 글자 수의 85%' }; // 파란 칸 이름을 화면 이름에 맞춰 보여 줌 (지침 속 이름은 그대로)
 
 function setWorkVisible(show) {
     document.getElementById('work-main').classList.toggle('hidden-element', !show);
