@@ -51,6 +51,7 @@ for (const pattern of [/async function rcRun\(\) \{[\s\S]*?\n\}/, /function rcRe
 
     // 파일은 하나만: 이미 있으면 새 파일을 받지 않고, 여러 개를 고르면 첫 파일만 불러옴
     vm.runInContext(source.match(/async function rcAddFiles\(list\) \{[\s\S]*?\n\}/)[0], context);
+    vm.runInContext(source.match(/function rcFixRange\(ws\) \{[\s\S]*?\n\}/)[0], context);
     Object.assign(context, {
         XLSX: { read: () => ({ SheetNames: ['진로'], Sheets: { 진로: {} } }), utils: { sheet_to_json: () => [] } },
         rcParseRows: (rows, sheet, name) => [{ name, text: '기록' }],

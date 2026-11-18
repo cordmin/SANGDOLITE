@@ -272,21 +272,39 @@ const RC_PDF_ACT = /^(?:([1-3])\s+)?(자율(?:\s*[·･]\s*자치)?|동아리|�
 const RC_PDF_FREE = /^(?:([1-3])\s+)?(?:[12]\s*학기\s+)?(진로\s*탐색|주제\s*선택|예술\s*[·･]?\s*체육|동아리)\s*활동\s*(?:\d+\s*(?:시간)?)?\s*(.*)$/;
 const RC_PDF_SUBJ = /^(?:\(\s*[12]\s*학기\s*\)\s*)?([가-힣A-Za-z][가-힣A-Za-z0-9ⅠⅡⅢ·\s]{0,14}?)\s*[:：]\s*(.*)$/;
 
+// 줄이 바뀌는 자리에 원래 띄어쓰기가 있었는지: PDF에서 알아낸 값(endSp)이 있으면 그대로 쓰고,
+// 없으면 한국어 끝말로 짐작함 (다음 줄이 '을·에서·함' 같은 조사·어미로 시작하면 붙이고, 앞 줄이 조사·어미·문장부호로 끝나면 띄움)
+const RC_WORD_END = /([을를은는이가에의와과로도만며고서여면나지게니든요함음임됨듯것등및중때후전내외간]|[.,)\]’”'"·…:;!?%])$/;
+const RC_NEXT_JOSA = /^([을를은는이가에의와과로도만함음임됨]|으로|에서|에게|하고|하며|하여|했|하였|하는|하기|한|할|된|되|적|성|화|들)([\s.,)]|$)/;
+function rcWrapSpace(prev, next, endSp) {
+    if (endSp != null) return endSp;
+    if (/^[.,)\]’”'"·…:;!?%]/.test(next) || RC_NEXT_JOSA.test(next)) return false;
+    return RC_WORD_END.test(prev.trim());
+}
+
 function rcParsePdfLines(pages, fileName = '') {
     const out = [];
     let who = { grade: '', cls: '', num: '', name: '' };
-    let section = null, last = null;
+    let section = null, last = null, lastEnd = null;
+    let endSp = null;   // 지금 줄 끝에 띄어쓰기가 있었는지 (모르면 null)
     const start = (area, subject, text, grade) => {
         if (!who.name) return null;
         last = { grade: grade || who.grade, cls: who.cls, num: who.num, name: who.name, subject: subject || '', area, text: text || '' };
+        lastEnd = endSp;
         out.push(last);
         return last;
     };
-    const append = t => { if (last && t) last.text += (last.text ? ' ' : '') + t; };
+    const append = t => {
+        if (!last || !t) return;
+        last.text += (last.text && rcWrapSpace(last.text, t, lastEnd) ? ' ' : '') + t;
+        lastEnd = endSp;
+    };
 
     for (const lines of pages) {
         for (const raw of lines) {
-            const line = raw.replace(/\s+/g, ' ').trim();
+            // 줄은 글자만 있거나, rcGroupLines가 만든 { text, endSp } 모양
+            endSp = typeof raw === 'string' ? null : raw.endSp;
+            const line = (typeof raw === 'string' ? raw : raw.text).replace(/\s+/g, ' ').trim();
             if (!line) continue;
 
             // 학생 바뀜: '1학년 3반 12번', '성명 홍길동'
@@ -327,6 +345,291 @@ function rcParsePdfLines(pages, fileName = '') {
         }
     }
     return out;
+}
+
+// ───────── PDF 글 조각 → 줄 ─────────
+// 조각: { s: 글자, x, y(위로 갈수록 큼), w: 폭, h: 글자 크기, sp: 띄어쓰기 조각인지, spAfter: 뒤에 띄어쓰기가 있었는지 }
+// 띄어쓰기 조각은 폭 값이 엉터리라 위치 계산에 쓰지 않음
+function rcJoinItems(items) {
+    let text = '', end = null;
+    for (const it of items) {
+        if (it.sp) { if (text && !text.endsWith(' ')) text += ' '; continue; }
+        if (end !== null && it.x - end > it.h * 0.25 && !text.endsWith(' ')) text += ' ';
+        text += it.s;
+        end = it.x + it.w;
+    }
+    return text.replace(/\s+/g, ' ').trim();
+}
+
+// 위→아래로 놓고, 높이 차이가 글자 크기의 45% 안이면 같은 줄로 묶음
+function rcGroupLines(parts) {
+    parts = [...parts].sort((a, b) => b.y - a.y || a.x - b.x);
+    const lines = [];
+    for (const p of parts) {
+        const last = lines[lines.length - 1];
+        if (last && Math.abs(last.y - p.y) <= Math.max(2, Math.min(last.h, p.h) * 0.45)) last.items.push(p);
+        else lines.push({ y: p.y, h: p.h, items: [p] });
+    }
+    for (const ln of lines) {
+        ln.items.sort((a, b) => a.x - b.x);
+        ln.words = ln.items.filter(i => !i.sp);
+        ln.text = rcJoinItems(ln.items);
+        const lw = ln.words[ln.words.length - 1];
+        ln.endSp = lw ? lw.spAfter ?? null : null;
+    }
+    return lines.filter(ln => ln.words.length);
+}
+
+// ───────── 표 모양 PDF ─────────
+// 나이스에서 반 전체를 '번호 | 성명 | 학년 | 특기사항' 표로 출력한 PDF를 엑셀과 같은 줄·칸으로 되살려 rcParseRows에 넘김.
+// 번호·성명은 합쳐진 칸의 '세로 가운데'에 찍히고, 쪽이 넘어가면 쪽마다 다시 찍힘.
+const rcNorm = t => t.replace(/\s+/g, '');
+const rcIsPdfHead = ln => { const n = rcNorm(ln.text); return n.includes('번호') && /성명|이름/.test(n) && !/담임|주민|보호자/.test(n); };
+const rcIsPdfFoot = ln => ln.text.length < 60 && /(^|\s)\d+\s*\/\s*\d+(\s|$)/.test(ln.text);
+const RC_CLASS_LINE = /([1-6])\s*학년\s*(\d{1,2})\s*반/;
+
+// 쪽 번호('3 / 12')·학교 이름이 있는 바닥 줄의 높이 (그 아래는 버림)
+function rcPdfFootY(lines) {
+    const ys = lines.filter(rcIsPdfFoot).map(l => l.y);
+    return ys.length ? Math.min(...ys) : null;
+}
+
+// 머리글 칸: 글자 사이가 가까운 조각은 한 칸 ("번 호" → 번호)
+function rcPdfHeadCells(ln) {
+    const cells = [];
+    for (const it of ln.words) {
+        const last = cells[cells.length - 1];
+        if (last && it.x - last.x1 < it.h * 1.5) { last.t += it.s; last.x1 = it.x + it.w; }
+        else cells.push({ t: it.s, x0: it.x, x1: it.x + it.w });
+    }
+    cells.forEach(c => c.t = rcNorm(c.t));
+    return cells;
+}
+
+function rcPdfIdCols(cells) {
+    const pick = re => cells.find(c => re.test(c.t));
+    const cols = { num: pick(/^번호?$/), name: pick(/^(성명|이름)$/), grade: pick(/^학년$/) };
+    if (!cols.grade) delete cols.grade;
+    return cols.num && cols.name ? cols : null;
+}
+
+// 학생 칸 글자를 가장 가까운 머리글 칸(번호·성명·학년)에 나눠 담음
+function rcPdfId(words, cols) {
+    if (!words.length) return null;
+    const keys = Object.keys(cols);
+    const mid = c => (c.x0 + c.x1) / 2;
+    const v = { num: '', name: '', grade: '' };
+    for (const w of words) {
+        const m = w.x + w.w / 2;
+        v[keys.reduce((a, b) => Math.abs(m - mid(cols[a])) <= Math.abs(m - mid(cols[b])) ? a : b)] += w.s;
+    }
+    const num = parseInt(v.num, 10);
+    return Number.isFinite(num) ? { num: String(num), name: rcNorm(v.name), grade: rcNorm(v.grade) } : null;
+}
+
+function rcPdfBodyLine(items, y, page) {
+    const words = items.filter(w => !w.sp);
+    if (!words.length) return null;
+    const lw = words[words.length - 1];
+    return { y, page, text: rcJoinItems(items), endSp: lw.spAfter ?? null, right: lw.x + lw.w };
+}
+
+// 줄들을 글로: 같은 쪽에서 줄 간격이 평소의 1.6배를 넘으면 문단 나눔
+function rcPdfBody(lines) {
+    const g = [];
+    lines.forEach((l, i) => { const p = lines[i - 1]; if (p && p.page === l.page) g.push(p.y - l.y); });
+    g.sort((a, b) => a - b);
+    const lineGap = g.length ? g[Math.floor(g.length * 0.3)] : 12;
+    return lines.reduce((out, l, i) => {
+        const p = lines[i - 1];
+        if (!p) return l.text;
+        if (p.page === l.page && p.y - l.y > lineGap * 1.6) return out + '\n' + l.text;
+        return out + (rcWrapSpace(p.text, l.text, p.endSp) ? ' ' : '') + l.text;
+    }, '');
+}
+
+// 줄 묶음(units: 위→아래)을 표시(markers: 위→아래) 순서대로 나눔.
+// 묶음 k의 가운데가 표시 k의 높이와 가장 가깝게 (동적계획). thr보다 좁은 줄 간격이나 문장 중간에서 자르면 벌점.
+function rcPartition(units, markers, thr = 0) {
+    const n = units.length, m = markers.length;
+    if (!m) return units.map(() => -1);
+    if (m === 1) return units.map(() => 0);
+    if (m > n) return units.map((_, i) => i);
+    const cost = (i, j, k) => Math.abs((units[i].top + units[j].bot) / 2 - markers[k].y);
+    const dp = Array.from({ length: m }, () => new Array(n).fill(Infinity));
+    const from = Array.from({ length: m }, () => new Array(n).fill(-1));
+    for (let j = 0; j < n; j++) dp[0][j] = cost(0, j, 0);
+    for (let k = 1; k < m; k++) for (let j = k; j < n; j++) for (let i = k; i <= j; i++) {
+        const v = dp[k - 1][i - 1] + cost(i, j, k) + Math.max(0, thr - (units[i - 1].bot - units[i].top))
+            + (units[i - 1].endOk === false ? thr * 1.5 : 0);
+        if (v < dp[k][j]) { dp[k][j] = v; from[k][j] = i; }
+    }
+    const owner = new Array(n).fill(0);
+    for (let k = m - 1, j = n - 1; k >= 0; k--) {
+        const i = k ? from[k][j] : 0;
+        for (let t = i; t <= j; t++) owner[t] = k;
+        j = i - 1;
+    }
+    return owner;
+}
+
+// 표 모양 PDF면 엑셀과 같은 줄 배열을, 아니면 null을 돌려줌
+function rcPdfTable(pages) {
+    if (!pages.some(ls => ls.some(rcIsPdfHead))) return null;
+    const cc = pages.some(ls => ls.some(ln => { const n = rcNorm(ln.text); return n.includes('영역') && n.includes('특기사항'); }));
+    return cc ? rcPdfChangcheRows(pages) : rcPdfSetukRows(pages);
+}
+
+// 세특·행특 표: [번호 | 성명 | 학년 | 특기사항]
+function rcPdfSetukRows(pages) {
+    const students = [];
+    let H = null, cur = null, cls = '', grade = '', subject = '', title = '';
+
+    // 머리글 아래 연속된 줄들: 본문 줄마다 주인 학생을 정함
+    const flush = block => {
+        if (!block.length || !H) return;
+        const ids = [], body = [];
+        for (const ln of block) {
+            const id = rcPdfId(ln.words.filter(w => w.x + w.w / 2 < H.cut), H.cols);
+            if (id) ids.push({ ...id, y: ln.y });
+            const b = rcPdfBodyLine(ln.items.filter(w => w.x >= H.cut - 1), ln.y, ln.page);
+            if (b) body.push(b);
+        }
+        // 두 번호 표시 사이에서 줄 간격이 가장 넓은 곳이 학생 경계 (첫 표시 위 줄은 첫 학생, 표시가 없으면 앞 학생이 이어짐)
+        const owner = body.map(() => ids.length - 1);
+        let bi = 0;
+        for (let k = 0; k < ids.length - 1; k++) {
+            let j = bi; while (j < body.length && body[j].y > ids[k].y) j++;
+            let end = j; while (end < body.length && body[end].y > ids[k + 1].y) end++;
+            let split = Math.max(j, bi), best = -1;
+            for (let m = Math.max(j, bi + 1, 1); m <= end && m < body.length; m++) {
+                const g = body[m - 1].y - body[m].y;
+                if (g > best) { best = g; split = m; }
+            }
+            for (let m = bi; m < split; m++) owner[m] = k;
+            bi = split;
+        }
+        body.forEach((b, m) => {
+            const id = ids[owner[m]];
+            if (id && !(cur && cur.num === id.num && cur.name === id.name && cur.cls === cls && cur.subject === subject)) {
+                cur = { grade: id.grade || grade, cls, num: id.num, name: id.name, subject, lines: [] };
+                students.push(cur);
+            }
+            if (cur) cur.lines.push(b);
+        });
+    };
+
+    pages.forEach((lines, page) => {
+        const footY = rcPdfFootY(lines);
+        let block = [];
+        for (const ln of lines) {
+            if (footY != null && ln.y <= footY + 4) continue;
+            ln.page = page;
+            const left = !H || ln.words[0].x < H.cut;
+            if (rcIsPdfHead(ln)) {
+                flush(block); block = [];
+                const cells = rcPdfHeadCells(ln), cols = rcPdfIdCols(cells);
+                H = cols ? { cols, cut: Math.max(...Object.values(cols).map(c => c.x1)) + 3 } : null;
+                title ||= cells[cells.length - 1].t;
+                continue;
+            }
+            const cm = left && ln.text.length < 60 && ln.text.match(RC_CLASS_LINE);   // '일반계 3학년 13반'
+            if (cm) { flush(block); block = []; grade = cm[1]; cls = cm[2]; continue; }
+            const sm = left && ln.text.match(/교\s*과\s*목\s*[:：]\s*(.+?)\s*(?:\(\d+\))?\s*$/);   // '교과목 : 국어(4)'
+            if (sm) { flush(block); block = []; subject = sm[1]; continue; }
+            if (/^<.*>$/.test(rcNorm(ln.text))) { flush(block); block = []; cur = null; continue; }   // <진로 선택 과목>: 번호가 1번부터 다시
+            if (/조회된\s*데이터가\s*없습니다/.test(ln.text)) continue;
+            if (H) block.push(ln);
+        }
+        flush(block);
+    });
+    if (!students.length) return null;
+    return [['학년', '반', '번호', '성명', '과목', title || '세부능력 및 특기사항'],
+        ...students.map(s => [s.grade, s.cls, s.num, s.name, s.subject, rcPdfBody(s.lines)])];
+}
+
+// 창체 표: 2단 머리글 [번호 | 성명 | 학년] + [영역 | 시간 | 특기사항]
+// 학생 칸은 그 학생 영역들 전체의, 영역 칸은 그 영역 글의 세로 가운데에 찍힘
+function rcPdfChangcheRows(pages) {
+    const isHead2 = ln => { const n = rcNorm(ln.text); return n.includes('영역') && n.includes('특기사항'); };
+    const students = [];
+    let C = null, cur = null, curArea = null, cls = '', grade = '';
+    const addLine = l => { if (curArea && !/^희\s*망\s*분\s*야/.test(l.text)) curArea.lines.push(l); };
+
+    pages.forEach((lines, page) => {
+        const footY = rcPdfFootY(lines);
+        const h1 = lines.findIndex(rcIsPdfHead), h2 = lines.findIndex(isHead2);
+        const hs = [h1, h2].filter(i => i >= 0);
+        lines.slice(0, hs.length ? Math.min(...hs) : 0).forEach(ln => {
+            const m = ln.text.match(RC_CLASS_LINE);
+            if (m) { grade = m[1]; cls = m[2]; }
+        });
+        if (h1 >= 0 && h2 >= 0) {
+            const cols = rcPdfIdCols(rcPdfHeadCells(lines[h1]));
+            const c2 = rcPdfHeadCells(lines[h2]);
+            const area = c2.find(c => c.t === '영역'), hour = c2.find(c => c.t === '시간');
+            if (cols && area) {
+                const idRight = Math.max(...Object.values(cols).map(c => c.x1));
+                const edge = (hour || area).x1;
+                // 본문 시작 위치 = 시간 칸 오른쪽에서 가장 흔한 줄 시작 위치
+                const starts = {};
+                lines.slice(Math.max(h1, h2) + 1).forEach(ln => {
+                    const f = ln.words.find(w => w.x > edge + 2);
+                    if (f) starts[Math.round(f.x)] = (starts[Math.round(f.x)] || 0) + 1;
+                });
+                const top = Object.entries(starts).sort((a, b) => b[1] - a[1])[0];
+                C = { cols, idCut: (idRight + area.x0) / 2, bodyCut: (edge + (top ? +top[0] : edge + 10)) / 2 };
+            }
+        }
+        if (!C) return;
+
+        const ids = [], areas = [], body = [];
+        lines.slice(Math.max(h1, h2) + 1).forEach(ln => {
+            if (footY != null && ln.y <= footY + 4) return;
+            if (/조회된\s*데이터가\s*없습니다/.test(ln.text)) return;
+            if (ln.text.length < 60 && RC_CLASS_LINE.test(ln.text) && ln.words[0].x < C.bodyCut) return;
+            const id = rcPdfId(ln.words.filter(w => w.x + w.w / 2 < C.idCut), C.cols);
+            if (id) ids.push({ ...id, y: ln.y });
+            const aw = ln.words.filter(w => w.x + w.w / 2 >= C.idCut && w.x < C.bodyCut);
+            const an = rcNorm(aw.map(w => w.s).join('')).replace(/\d+$/, '');   // '자율활동 34' → 자율활동
+            if (an) areas.push({ y: ln.y, name: an });
+            const b = rcPdfBodyLine(ln.items.filter(w => w.x >= C.bodyCut), ln.y, page);
+            if (b) body.push(b);
+        });
+        if (!body.length && !areas.length) return;
+
+        // 문장이 끝난 줄: 마침표로 끝나거나 칸 오른쪽 끝까지 차 있지 않음
+        const maxRight = Math.max(0, ...body.map(b => b.right));
+        body.forEach(b => b.endOk = /[.!?]\s*$/.test(b.text) || b.right < maxRight - 30);
+        const gs = body.slice(1).map((b, i) => body[i].y - b.y).sort((a, b) => a - b);
+        const lineGap = gs.length ? gs[Math.floor(gs.length / 2)] : 12;
+        // ① 본문 줄 → 영역  ② 영역 묶음 → 학생
+        const lineOwner = rcPartition(body.map(b => ({ top: b.y, bot: b.y, endOk: b.endOk })), areas, lineGap * 1.8);
+        const groups = areas.map((a, k) => {
+            const ls = body.filter((_, i) => lineOwner[i] === k);
+            return { area: a, lines: ls, top: ls.length ? ls[0].y : a.y, bot: ls.length ? ls[ls.length - 1].y : a.y };
+        });
+        const groupOwner = rcPartition(groups, ids);
+
+        if (!areas.length) { body.forEach(addLine); return; }   // 영역 표시가 없는 쪽: 앞 학생·영역이 이어짐
+        groups.forEach((g, k) => {
+            const id = ids[groupOwner[k]];
+            if (id && !(cur && cur.num === id.num && cur.name === id.name && cur.cls === cls)) {
+                cur = { grade: id.grade || grade, cls, num: id.num, name: id.name, areas: [] };
+                students.push(cur);
+                curArea = null;
+            }
+            if (!cur) return;
+            if (!curArea || curArea.name !== g.area.name) {
+                curArea = cur.areas.find(a => a.name === g.area.name);
+                if (!curArea) cur.areas.push(curArea = { name: g.area.name, lines: [] });
+            }
+            g.lines.forEach(addLine);
+        });
+    });
+    if (!students.length) return null;
+    return [['학년', '반', '번호', '성명', '영역', '특기사항'],
+        ...students.flatMap(s => s.areas.map(a => [s.grade, s.cls, s.num, s.name, a.name, rcPdfBody(a.lines)]))];
 }
 
 // ───────── 점검 ─────────
@@ -439,4 +742,4 @@ function rcHighlight(text, issues) {
     return html.replace(re, m => `<mark class="rc-mark rc-${levelOf(raw.get(m))}">${m}</mark>`).replace(/\n/g, '<br>');
 }
 
-if (typeof module !== 'undefined') module.exports = { RC_DEFAULT_SETTINGS, RC_DEFAULT_GUIDE, rcApplyGuide, rcPattern, RC_TYPES, rcParseRows, rcParsePdfLines, rcCheckOne, rcCheckAll, rcHighlight, rcGuessArea };
+if (typeof module !== 'undefined') module.exports = { RC_DEFAULT_SETTINGS, RC_DEFAULT_GUIDE, rcApplyGuide, rcPattern, RC_TYPES, rcParseRows, rcParsePdfLines, rcGroupLines, rcPdfTable, rcCheckOne, rcCheckAll, rcHighlight, rcGuessArea };

@@ -41,11 +41,19 @@ async function rcAddFiles(list) {
             let records;
             if (isPdf) {
                 rcLoading('파일을 읽는 중이에요', file.name);
-                try { records = rcParsePdfLines(await rcPdfLines(file), file.name); } finally { rcLoading(null); }
+                try {
+                    const pages = await rcPdfLines(file);
+                    // 반 전체 표 모양 PDF는 엑셀처럼 표로 되살려 읽고, 아니면(학생 한 명씩) 줄 글로 읽음
+                    const rows = rcPdfTable(pages);
+                    records = rows ? rcParseRows(rows, '', file.name) : [];
+                    if (!records.length) records = rcParsePdfLines(pages, file.name);
+                } finally { rcLoading(null); }
             } else {
                 const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
-                records = wb.SheetNames.flatMap(sn =>
-                    rcParseRows(XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: '' }), sn, file.name));
+                records = wb.SheetNames.flatMap(sn => {
+                    rcFixRange(wb.Sheets[sn]);
+                    return rcParseRows(XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: '' }), sn, file.name);
+                });
             }
             if (!records.length) {
                 showToast(isPdf
@@ -80,32 +88,52 @@ function rcLoadPdfJs() {
     return rcPdfReady;
 }
 
-// 쪽마다 글 조각을 같은 높이끼리 묶어 줄로 만듦
+// 나이스 엑셀은 표 범위 정보가 틀려서 아래쪽 줄이 빠지기도 함 → 실제 들어 있는 칸으로 범위를 다시 잡음
+function rcFixRange(ws) {
+    let s = null, e = null;
+    for (const k of Object.keys(ws)) {
+        if (k[0] === '!') continue;
+        const c = XLSX.utils.decode_cell(k);
+        if (!s) { s = { ...c }; e = { ...c }; continue; }
+        s.r = Math.min(s.r, c.r); s.c = Math.min(s.c, c.c);
+        e.r = Math.max(e.r, c.r); e.c = Math.max(e.c, c.c);
+    }
+    if (s) ws['!ref'] = XLSX.utils.encode_range({ s, e });
+}
+
+// 쪽마다 글 조각을 좌표와 함께 꺼내 줄로 묶음 (rcGroupLines)
 async function rcPdfLines(file) {
     await rcLoadPdfJs();
     const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
     const pages = [];
     for (let p = 1; p <= pdf.numPages; p++) {
-        const { items } = await (await pdf.getPage(p)).getTextContent();
-        const rows = [];
+        const page = await pdf.getPage(p);
+        const { items } = await page.getTextContent();
+        const vp = page.getViewport({ scale: 1 });
+        // pdf.js는 줄 끝 띄어쓰기를 버림 → 그리기 명령 원문에서 낱말 뒤 띄어쓰기를 되찾음
+        let raw = '';
+        try {
+            const ops = await page.getOperatorList();
+            ops.fnArray.forEach((fn, i) => {
+                if (fn !== pdfjsLib.OPS.showText && fn !== pdfjsLib.OPS.showSpacedText) return;
+                for (const g of ops.argsArray[i][0]) if (g && typeof g === 'object' && g.unicode) raw += g.unicode;
+            });
+        } catch { raw = ''; }
+        let ptr = 0;
+        const parts = [];
         for (const it of items) {
             if (!it.str) continue;
-            const y = it.transform[5], x = it.transform[4];
-            let row = rows.find(r => Math.abs(r.y - y) < 2.5);
-            if (!row) rows.push(row = { y, parts: [] });
-            row.parts.push({ x, end: x + it.width, str: it.str });
-        }
-        rows.sort((a, b) => b.y - a.y);
-        pages.push(rows.map(r => {
-            r.parts.sort((a, b) => a.x - b.x);
-            let line = '', end = null;
-            for (const t of r.parts) {
-                if (end !== null && t.x - end > 1.5 && !line.endsWith(' ') && !t.str.startsWith(' ')) line += ' ';
-                line += t.str;
-                end = t.end;
+            const sp = !it.str.trim();
+            let spAfter = null;
+            if (!sp && raw) {
+                const k = raw.indexOf(it.str, ptr);
+                if (k >= 0 && k - ptr < 40) { ptr = k + it.str.length; spAfter = /\s/.test(raw[ptr] || ''); }
             }
-            return line;
-        }));
+            // 화면 기준 좌표로 바꿈: 90° 돌아간 쪽도 가로·세로가 바르게 잡힘
+            const t = pdfjsLib.Util.transform(vp.transform, it.transform);
+            parts.push({ s: it.str, x: t[4], y: vp.height - t[5], w: it.width || 0, h: Math.hypot(t[2], t[3]) || 10, sp, spAfter });
+        }
+        pages.push(rcGroupLines(parts));
     }
     return pages;
 }
