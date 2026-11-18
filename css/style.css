@@ -61,6 +61,8 @@ button:not(:disabled):active { scale: 0.96; }
 
 .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; border-radius: 4px; }
+/* 세로 막대 위아래를 둥근 모서리(최대 14px)만큼 비워서, 모서리에 막대 끝이 잘리지 않게 함 */
+.custom-scrollbar::-webkit-scrollbar-track:vertical { margin: 14px 0; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #64748b; }
 
