@@ -24,7 +24,7 @@ body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; }
 
 body { counter-reset: step-counter; }
 /* 생활 태도: 좋은 태도/아쉬운 태도 짝 중 하나만 고르는 반반 버튼. 고른 쪽으로 색 조각이 미끄러짐 */
-.kw-pair { position: relative; display: flex; height: 34px; border: 1px solid #cbd5e1; border-radius: 10px; overflow: hidden; background: #fff; }
+.kw-pair { position: relative; display: flex; height: 34px; border: 1px solid #94a3b8; border-radius: 10px; overflow: hidden; background: #fff; }
 .kw-pair button { flex: 1; position: relative; z-index: 1; font-size: 13px; font-weight: 600; color: #334155; transition: color .2s; }
 .kw-pair .kw-slide { position: absolute; top: 0; bottom: 0; left: 0; width: 50%; opacity: 0; background: #43965F; transition: left .25s cubic-bezier(.3,.7,.3,1), background-color .25s, opacity .2s; }
 .kw-pair button:focus { outline: none; } .kw-pair button:focus-visible { box-shadow: inset 0 0 0 2px #334155; }
@@ -159,3 +159,100 @@ td.excel-byte { background-color: #f1f5f9; padding: 12px 8px !important; }
 .set-add { display: flex; gap: 6px; margin-top: 10px; }
 .set-addbtn { flex-shrink: 0; height: 38px; padding: 0 14px; border-radius: 8px; background: #334155; color: #fff; font-size: 13px; font-weight: 700; white-space: nowrap; }
 .set-addbtn:hover { background: #253141; }
+
+/* 생활기록부 보조 점검 */
+.rc-safe { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: #475569; }
+.rc-safe svg { width: 15px; height: 15px; color: #1D6F42; }
+.rc-drop { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 26px 16px; border: 1.5px dashed #94a3b8; border-radius: 12px; background: #f8fafc; text-align: center; cursor: pointer; transition: background-color .2s, border-color .2s; }
+.rc-drop:hover, .rc-drop.over, .rc-drop:focus-visible { background: #eff6ff; border-color: #2563eb; outline: none; }
+.rc-drop svg { width: 30px; height: 30px; color: #334155; stroke-width: 1.6; }
+.rc-drop strong { font-size: 15px; color: #1e293b; }
+.rc-file { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 13.5px; }
+.rc-file-name { font-weight: 700; color: #1e293b; overflow-wrap: anywhere; }
+.rc-file button { margin-left: auto; font-size: 12.5px; font-weight: 700; color: #64748b; padding: 2px 8px; border-radius: 8px; }
+.rc-file button:hover { background: #f1f5f9; color: #b91c1c; }
+.rc-msg { font-size: 13px; font-weight: 600; color: #b91c1c; }
+.rc-msg:empty { display: none; }
+.rc-tabs { flex-wrap: wrap; }
+.rc-tabs .set-count { background: #e2e8f0; color: #64748b; }
+.rc-tabs .set-count.rc-has { background: #fee2e2; color: #b91c1c; }
+.rc-tabs button.on .set-count { background: #fff; color: #334155; }
+.rc-table td { vertical-align: top; font-size: 14px; padding: 10px 12px; }
+.rc-table .rc-who b, .rc-table .rc-where b { display: block; font-weight: 700; color: #1e293b; }
+.rc-table .rc-who small, .rc-table .rc-where small { display: block; margin-top: 2px; font-size: 12px; color: #64748b; line-height: 1.4; }
+.rc-table .rc-text { word-break: keep-all; overflow-wrap: anywhere; }
+.rc-table td.excel-byte { vertical-align: middle; }
+.rc-mark { border-radius: 3px; padding: 0 1px; }
+.rc-mark.rc-no { background: #fecaca; color: #7f1d1d; }
+.rc-mark.rc-check { background: #fde68a; color: #78350f; }
+.rc-fix ul { display: flex; flex-direction: column; gap: 6px; }
+.rc-fix li { font-size: 13px; line-height: 1.5; padding-left: 8px; border-left: 3px solid #f59e0b; }
+.rc-fix li.rc-no { border-left-color: #dc2626; }
+.rc-tag { display: block; font-size: 11.5px; font-weight: 700; color: #64748b; }
+.rc-blank { color: #94a3b8; }
+.rc-empty { text-align: center !important; color: #64748b; font-weight: 600; vertical-align: middle !important; }
+.rc-help { font-size: 13px; line-height: 1.6; color: #475569; }
+.rc-field { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-size: 13.5px; font-weight: 700; color: #334155; }
+.rc-input-unit { display: inline-flex; align-items: center; gap: 8px; }
+.rc-input-unit input { width: 96px; text-align: center; }
+.rc-input-unit em { font-style: normal; font-size: 12.5px; font-weight: 600; color: #64748b; white-space: nowrap; }
+.rc-acc { flex-shrink: 0; border: 1px solid #94a3b8; border-radius: 10px; background: #fff; }
+.rc-acc summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 14px; font-size: 14px; font-weight: 700; color: #1e293b; cursor: pointer; user-select: none; border-radius: 10px; }
+.rc-acc summary::-webkit-details-marker { display: none; }
+.rc-acc summary::after { content: ''; width: 8px; height: 8px; border-right: 2px solid #64748b; border-bottom: 2px solid #64748b; transform: translateY(-2px) rotate(45deg); transition: transform .2s; }
+.rc-acc[open] summary::after { transform: translateY(2px) rotate(-135deg); }
+.rc-acc summary:hover { background: #f8fafc; }
+.rc-acc summary:focus-visible { outline: 2px solid #334155; outline-offset: -2px; }
+.rc-acc[open] summary { border-bottom: 1px solid #e2e8f0; border-radius: 10px 10px 0 0; }
+.rc-acc-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.rc-types { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.rc-types label { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-weight: 600; color: #334155; cursor: pointer; }
+.rc-types label:has(input:checked) { border-color: #334155; background: #f1f5f9; }
+.rc-types input { width: 16px; height: 16px; accent-color: #334155; }
+.rc-spell-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.rc-spell-list span { font-size: 12.5px; padding: 3px 9px; border-radius: 99px; background: #f1f5f9; color: #334155; }
+.rc-spell-list s { color: #b91c1c; }
+.rc-table .rc-who small.rc-area { margin-top: 6px; color: #334155; font-weight: 600; }
+.rc-clear { align-self: flex-end; font-size: 12.5px; font-weight: 700; color: #64748b; padding: 2px 8px; border-radius: 8px; }
+.rc-clear:hover { background: #f1f5f9; color: #b91c1c; }
+.rc-rule-group { display: flex; flex-direction: column; gap: 6px; }
+.rc-rule-group > b { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 700; color: #1e293b; }
+/* 제목 앞 작은 불빛: 기재 불가 = 빨강, 확인 필요 = 주황 */
+.rc-rule-group > b::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; box-shadow: 0 0 0 2px #fef3c7, 0 0 6px #f59e0b; }
+.rc-rule-group.rc-no > b::before { background: #dc2626; box-shadow: 0 0 0 2px #fee2e2, 0 0 6px #dc2626; }
+/* 생성 결과 보조 점검 표시 */
+.gen-warn { margin-top: 8px; padding: 6px 10px; border-left: 3px solid #dc2626; background: #fef2f2; border-radius: 0 6px 6px 0; font-size: 12.5px; line-height: 1.5; color: #7f1d1d; display: flex; flex-direction: column; gap: 2px; }
+.rc-guide-body { padding: 12px 14px; }
+/* 관리자 '생활기록부 점검 지침': 영역별 최대 글자수 표 (기재요령 162쪽 표 모양) */
+.rc-limit-table { width: 100%; border-collapse: collapse; font-size: 13px; color: #334155; }
+.rc-limit-table th, .rc-limit-table td { border: 1px solid #94a3b8; padding: 6px 8px; vertical-align: middle; }
+.rc-limit-table thead th { background: #f1f5f9; font-weight: 700; text-align: center; }
+.rc-limit-table tbody th { background: #f8fafc; font-weight: 700; text-align: center; width: 150px; word-break: keep-all; }
+.rc-limit-table td { text-align: center; }
+.rc-limit-table td:first-of-type { word-break: keep-all; }
+.rc-limit-table td.rc-num { text-align: center; white-space: nowrap; width: 100px; }
+.rc-limit-table td:last-child { width: 80px; text-align: center; color: #475569; }
+/* 관리자 '생활기록부 점검 지침' 수정 표 */
+.rc-edit-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rc-edit-table th { padding: 4px 6px; text-align: left; font-weight: 700; color: #475569; }
+.rc-edit-table td { padding: 3px 4px; vertical-align: middle; }
+.rc-edit-table .rc-edit { height: 32px; font-size: 13px; font-weight: 500; padding: 0 8px; }
+.rc-arrow { text-align: center; color: #64748b; }
+.rc-del { font-size: 12.5px; font-weight: 700; color: #64748b; padding: 4px 8px; border-radius: 8px; }
+.rc-del:hover { background: #fef2f2; color: #b91c1c; }
+.rc-words { position: relative; }
+.rc-words .rc-auto { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 99px; background: #e0e7ff; color: #3730a3; pointer-events: auto; cursor: help; }
+/* 자동 규칙 배지에 마우스를 올리거나 키보드로 고르면 숨은 규칙 설명이 바로 뜸 */
+.rc-auto[data-tip]:hover::after, .rc-auto[data-tip]:focus::after { content: attr(data-tip); position: absolute; right: 0; top: calc(100% + 8px); z-index: 40; width: 300px; padding: 9px 12px; border-radius: 10px; background: #1e293b; color: #f8fafc; font-size: 12.5px; font-weight: 500; line-height: 1.6; white-space: normal; box-shadow: 0 8px 24px rgba(15, 23, 42, .25); }
+.rc-auto[data-tip]:focus { outline: 2px solid #3730a3; outline-offset: 1px; }
+.rc-auto[data-tip]:hover, .rc-auto[data-tip]:focus { z-index: 45; }
+.rc-edit-table tr:has(.rc-auto:hover), .rc-edit-table tr:has(.rc-auto:focus) { position: relative; z-index: 45; }
+.rc-words .rc-edit:has(+ .rc-auto) { padding-right: 86px; }
+/* 점검 지침: 맞춤법 카드와 최대 글자수 카드를 한 줄에 나란히 (좁은 화면은 위아래) */
+.rc-guide-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 12px; align-items: start; }
+.rc-guide-pair .rc-edit-table th[style*="width:120px"] { width: 90px !important; }
+.rc-guide-pair .rc-edit-table th[style*="width:110px"] { width: 80px !important; }
+/* 점검 지침 보기 화면: 왼쪽(기재 점검·맞춤법) + 오른쪽(최대 글자수), 좁으면 위아래 */
+.rc-guide-cols { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
+.rc-guide-left { flex: 1 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.rc-guide-cols > .guide-card { flex: 0 1 520px; min-width: 300px; }
