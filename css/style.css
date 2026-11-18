@@ -5,7 +5,7 @@ body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; }
 .sidebar-panel::before { width: 320px; height: 320px; background: #1d2c4b; left: 94px; top: -150px; }
 .sidebar-panel::after { width: 290px; height: 290px; background: #1c3470; right: -150px; bottom: -130px; }
 .sidebar-logo { mask-image: linear-gradient(45deg, #000 0%, #000 65%, transparent 100%); -webkit-mask-image: linear-gradient(45deg, #000 0%, #000 65%, transparent 100%); }
-.sidebar-area-btn { transition: background-color 0.2s, color 0.2s; border: 0; background: transparent; color: #d8e1f0; text-align: left; width: 100%; font-weight: 600; display: flex; align-items: center; gap: 10px; padding: 15px 12px; min-height: 53px; border-radius: 15px; font-size: 14px; line-height: 1.45; }
+.sidebar-area-btn { transition: background-color 0.2s, color 0.2s; border: 0; background: transparent; color: #d8e1f0; text-align: left; width: 100%; font-weight: 600; display: flex; align-items: center; gap: 10px; padding: 11px 12px; min-height: 45px; border-radius: 14px; font-size: 15px; line-height: 1.45; }
 .sidebar-area-btn svg { width: 21px; height: 21px; flex-shrink: 0; stroke-width: 1.7; color: #b9c7dc; }
 .sidebar-area-btn span { white-space: nowrap; }
 .sidebar-area-btn:hover { background-color: #243650; color: #ffffff; }
