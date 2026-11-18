@@ -185,7 +185,7 @@ td.excel-byte { background-color: #f1f5f9; padding: 12px 8px !important; }
 /* 생활기록부 보조 점검 */
 .rc-safe { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: #475569; }
 .rc-safe svg { width: 15px; height: 15px; color: #1D6F42; }
-.rc-import { position: absolute; inset: 40px 8px 0 0; display: grid; place-items: center; padding: 24px; pointer-events: none; }
+.rc-import { position: absolute; inset: 40px 8px 0 0; display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; padding: 24px; pointer-events: none; }
 .rc-import[hidden] { display: none; }
 .rc-import-panel { width: 580px; max-width: 100%; padding: 34px; border: 3px dashed #aebdce; border-radius: 20px; background: #f8fafc; color: #26364b; text-align: center; pointer-events: auto; transition: background-color .15s, border-color .15s; }
 .rc-import-panel h2 { margin: 0; font-size: 24px; line-height: 1.5; letter-spacing: -.6px; font-weight: 700; word-break: keep-all; }
@@ -202,18 +202,21 @@ td.excel-byte { background-color: #f1f5f9; padding: 12px 8px !important; }
 .rc-loading { position: absolute; inset: 40px 8px 0 0; z-index: 5; display: grid; place-items: center; padding: 24px; background: rgba(255, 255, 255, .82); backdrop-filter: blur(2px); animation: rc-fade .2s ease-out; }
 .rc-loading[hidden], #rc-drop.loading .rc-import { display: none; }
 .rc-loading-panel { display: flex; flex-direction: column; align-items: center; text-align: center; }
-.rc-loader { position: relative; display: grid; place-items: center; width: 68px; height: 68px; margin-bottom: 18px; color: #334155; }
-.rc-loader > span { position: absolute; inset: 0; border-radius: 50%; border: 3px solid #e2e8f0; border-top-color: #334155; animation: rc-spin .9s cubic-bezier(.5, .15, .5, .85) infinite; }
-.rc-loader svg { width: 26px; height: 26px; stroke-width: 1.8; animation: rc-pulse 1.6s ease-in-out infinite; }
-.rc-loading-text { font-size: 18px; font-weight: 700; letter-spacing: -.3px; color: #1e293b; }
-.rc-loading-text::after { content: ''; display: inline-block; width: 1.2em; text-align: left; animation: rc-dots 1.2s steps(4) infinite; }
+.rc-bar-pct { position: absolute; top: calc(100% + 9px); left: 0; transform: translateX(-50%); padding: 3px 9px; border-radius: 999px; background: #334155; color: #fff; font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.3; transition: left .3s ease-out; }
+.rc-bar-pct::before { content: ''; position: absolute; left: 50%; top: -4px; margin-left: -4px; border: 4px solid transparent; border-top: 0; border-bottom-color: #334155; }
+.rc-word { display: flex; gap: 5px; font-size: 22px; font-weight: 800; line-height: 1; color: #334155; }
+.rc-word span { animation: rc-wave 1.2s ease-in-out infinite; }
+@keyframes rc-wave { 0%, 40%, 100% { transform: translateY(0); } 20% { transform: translateY(-9px); } }
+/* 연필(30px)이 바 위로 올라오므로 글자와 바 사이를 연필 높이만큼 띄움: 지우개 끝이 글자에 살짝 닿음 */
+.rc-bar { position: relative; width: 260px; max-width: 70vw; height: 14px; margin: 30px 0 22px; border-radius: 999px; background: #e2e8f0; }
+.rc-bar-fill { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: 999px; background: #334155; transition: width .3s ease-out; }
+/* 연필심(왼쪽 아래 끝)이 채워진 바 끝 바로 위에 닿게 둠 */
+.rc-pencil { position: absolute; top: 0; left: 0; margin-left: -1px; transform: translateY(-100%); transform-origin: 1px 29px; transition: left .3s ease-out; animation: rc-write .35s ease-in-out infinite alternate; }
 .rc-loading-sub { margin-top: 6px; font-size: 13.5px; color: #64748b; max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rc-loading-sub:empty { display: none; }
-@keyframes rc-spin { to { transform: rotate(360deg); } }
-@keyframes rc-pulse { 50% { transform: scale(.88); opacity: .7; } }
-@keyframes rc-dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75%, 100% { content: '...'; } }
+@keyframes rc-write { from { transform: translateY(-100%) rotate(-7deg); } to { transform: translateY(-100%) rotate(5deg); } }
 @keyframes rc-fade { from { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .rc-loader > span, .rc-loader svg, .rc-loading-text::after { animation-duration: 3s; } }
+@media (prefers-reduced-motion: reduce) { .rc-pencil, .rc-word span { animation-duration: 3s; } }
 #rc-drop.over .rc-import-panel { background: #eef3f8; border-color: #526b89; }
 @media (max-width: 480px) { .rc-import { padding: 16px; } .rc-import-panel { padding: 28px 20px; } .rc-import-panel h2 { font-size: 22px; } }
 #rc-drop.over { background: #eff6ff; outline: 2px dashed #2563eb; outline-offset: -6px; }

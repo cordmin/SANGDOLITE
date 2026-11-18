@@ -72,6 +72,7 @@ async function rcAddFiles(list) {
     }
     rcRenderFiles();
     rcRenderResults();
+    if (rcFiles.length) rcRun(); // 불러오면 바로 점검 (맨 앞에서 이미 파일이 있으면 돌아가므로 여기 오면 새 파일)
 }
 
 // PDF 도구는 PDF를 처음 올릴 때만 불러옴 (도구만 받아 오고, 파일은 브라우저 안에서만 읽음)
@@ -172,15 +173,26 @@ function rcRenderFiles() {
         + `<button type="button" onclick="rcAskClose(${i})" aria-label="${rcEscape(f.name)} 닫기" title="닫기"><i data-lucide="x"></i></button></div>`
     ).join('');
     if (window.lucide) lucide.createIcons();
-    document.getElementById('rc-run-btn').disabled = !rcFiles.length || rcChecking;
 }
 
 // 표 가운데 로딩 표시 (text가 없으면 숨김)
+// ponytail: 맞춤법 검사는 한 번에 끝나서 실제 진행률을 모름 → 처음엔 빠르게, 90%에 가까울수록 천천히 차게 함
+let rcBarTimer = null;
 function rcLoading(text, sub = '') {
     const box = document.getElementById('rc-loading');
     box.hidden = !text;
     document.getElementById('rc-drop').classList.toggle('loading', !!text);
+    clearInterval(rcBarTimer);
     if (!text) return;
+    let p = 0;
+    const draw = () => {
+        document.getElementById('rc-bar-fill').style.width = p + '%';
+        document.getElementById('rc-pencil').style.left = p + '%';
+        document.getElementById('rc-bar-pct').style.left = p + '%';
+        document.getElementById('rc-bar-pct').textContent = Math.round(p) + '%';
+    };
+    draw();
+    rcBarTimer = setInterval(() => { p += (90 - p) * 0.06; draw(); }, 150);
     document.getElementById('rc-loading-text').textContent = text;
     document.getElementById('rc-loading-sub').textContent = sub;
 }
@@ -192,7 +204,7 @@ async function rcRun() {
     const records = files.flatMap(f => f.records);
     rcChecking = true;
     rcRenderFiles();
-    rcLoading('점검하는 중이에요', `기록 ${records.length}건을 살펴보고 있어요`);
+    rcLoading('점검하는 중이에요');
     try {
         const spellings = await rcCheckSpelling(records);
         if (version !== rcRunVersion || files.length !== rcFiles.length || files.some((file, i) => file !== rcFiles[i])) return;
@@ -249,10 +261,11 @@ function rcRenderResults() {
     }).join('');
     filter.value = rcTab;
     document.getElementById('rc-export-btn').disabled = !rcResults;
-    document.getElementById('rc-import').hidden = !!rcResults;
+    document.getElementById('rc-import').hidden = !!(rcResults || rcFiles.length);
 
     if (!rcResults) {
-        tbody.innerHTML = '<tr class="filler-row" style="height:100%"><td colspan="6"></td></tr>';
+        const ready = rcFiles.length ? `<td colspan="6" class="rc-empty">점검 결과가 없어요. 파일을 닫고 다시 불러오면 다시 점검해요.</td>` : '<td colspan="6"></td>';
+        tbody.innerHTML = `<tr class="filler-row" style="height:100%">${ready}</tr>`;
         return;
     }
 
@@ -366,7 +379,6 @@ function rcRenderCheckGuide() {
     }
     const inp = (sec, i, f, v, ph = '') => `<input class="set-input rc-edit" data-sec="${sec}" data-i="${i}" data-f="${f}" value="${rcEscape(v)}" placeholder="${ph}">`;
     const del = (sec, i) => `<button type="button" class="rc-del" onclick="rcDraftRemove('${sec}', ${i})" aria-label="규칙 삭제">×</button>`;
-    const add = sec => `<button type="button" class="guide-btn mt-2" onclick="rcDraftAdd('${sec}')">+ 줄 더하기</button>`;
     const forbid = g.forbid.map((r, i) => `<tr><td><select class="set-input rc-edit" data-sec="forbid" data-i="${i}" data-f="level"><option value="no"${r.level === 'check' ? '' : ' selected'}>기재 불가</option><option value="check"${r.level === 'check' ? ' selected' : ''}>확인 필요</option></select></td>`
         + `<td>${inp('forbid', i, 'label', r.label, '이름')}</td><td class="rc-words">${inp('forbid', i, 'words', r.words, r.find ? '' : '예: 토익, 토플')}${r.find ? `<span class="rc-auto" tabindex="0" data-tip="${rcEscape(r.findNote || '낱말로 적을 수 없는 찾기 규칙이 함께 들어 있어요.')}">+ 자동 규칙</span>` : ''}</td><td>${inp('forbid', i, 'why', r.why, '고칠 점에 보일 문구')}</td><td>${del('forbid', i)}</td></tr>`).join('');
     const spell = g.spell.map((r, i) => `<tr><td>${inp('spell', i, 'wrong', r.wrong, '틀린 말')}</td><td>${inp('spell', i, 'right', r.right, '바른 말')}</td><td><button type="button" class="rc-spell-delete" onclick="rcDraftRemove('spell', ${i})" aria-label="${rcEscape(r.wrong || '빈')} 규칙 삭제">×</button></td></tr>`).join('');
@@ -377,7 +389,7 @@ function rcRenderCheckGuide() {
         return `<tr>${first ? `<th scope="rowgroup" rowspan="${span}">${rcEscape(r.group)}</th>` : ''}<td>${rcEscape(r.item)}</td><td><span class="rc-limit-unit"><input type="text" inputmode="numeric" pattern="[0-9]+" class="set-input rc-edit rc-limit-input" data-sec="limits" data-i="${i}" data-f="max" data-valid-limit="${rcEscape(r.max)}" value="${rcEscape(r.max)}" aria-label="${rcEscape(r.item)} 최대 글자 수" onbeforeinput="if(event.data && /[^0-9]/.test(event.data)) event.preventDefault()" onblur="rcValidateLimitInput(this, true)"><span>자</span></span></td></tr>`;
     }).join('');
     list.innerHTML = rcCard(1, '기재 점검 내용',
-            `<table class="rc-edit-table"><thead><tr><th style="width:120px">구분</th><th style="width:160px">이름</th><th>찾을 말</th><th>고칠 점 문구</th><th style="width:60px"></th></tr></thead><tbody>${forbid}</tbody></table>${add('forbid')}`, '', RC_FORBID_HELP)
+            `<table class="rc-edit-table"><thead><tr><th style="width:120px">구분</th><th style="width:160px">이름</th><th>찾을 말</th><th>고칠 점 문구</th><th style="width:60px"></th></tr></thead><tbody>${forbid}</tbody></table>`, '', `<button type="button" class="rc-spell-add" onclick="rcDraftAdd('forbid')">+ 규칙 추가</button>` + RC_FORBID_HELP)
         + '<div class="rc-guide-pair">' + rcCard(2, '맞춤법 점검 내용', `<div class="rc-rounded-table"><table class="rc-edit-table rc-spell-editor" aria-label="맞춤법 보완 규칙"><colgroup><col><col><col style="width:40px"></colgroup><thead><tr><th>틀린 말</th><th>바른 말</th><th>삭제</th></tr></thead><tbody>${spell}</tbody></table></div>`, RC_SPELL_FLOW, `<button type="button" class="rc-spell-add" onclick="rcDraftAdd('spell')">+ 규칙 추가</button>`)
         + rcCard(3, '영역별 입력 가능 최대 글자수', `<div class="rc-rounded-table"><table class="rc-edit-table rc-limit-editor"><thead><tr><th>영역</th><th>세부항목</th><th style="width:100px">최대 글자수</th></tr></thead><tbody>${limits}</tbody></table></div>` + RC_LIMIT_FOOT) + '</div>';
 }

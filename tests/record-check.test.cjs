@@ -116,6 +116,9 @@ assert.deepEqual([...brief], [
 ]);
 assert.equal(pdf[0].num, '12');
 assert.equal(pdf[6].cls, '1');
+// 생활기록부가 아닌 PDF(기재요령 같은 안내서) 본문 속 '성명'은 학생 이름으로 보지 않음
+assert.equal(rcParsePdfLines([['신입생의 학생정보(성명 제외) 수정', '성명： 성별： 주민등록번호：', '반·번호 성명 항목 교감 교장',
+    '행동특성 및 종합의견', '1 기재 예시 문장임.']]).length, 0);
 console.log('PDF record parse passed');
 
 // 2026 기재요령(중학교) 반영

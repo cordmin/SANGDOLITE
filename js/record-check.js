@@ -308,8 +308,9 @@ function rcParsePdfLines(pages, fileName = '') {
             if (!line) continue;
 
             // 학생 바뀜: '1학년 3반 12번', '성명 홍길동'
+            // '성명'은 줄 맨 앞이나 '…번' 바로 뒤에 있을 때만 이름으로 봄 (본문 속 '성명 제외', '성명： 성별：'은 이름이 아님)
             const g = line.match(/([1-3])\s*학년\s*(\d{1,2})\s*반\s*(\d{1,2})\s*번/);
-            const n = line.match(/성\s*명\s*[:：]?\s*([가-힣]{2,5})(?![가-힣])/);
+            const n = line.match(/(?:^|\d\s*번\s*)성\s*명\s*[:：]?\s*([가-힣]{2,5})(?![가-힣])(?!\s*[:：])/);
             if (g || n) {
                 const next = { grade: g ? g[1] : who.grade, cls: g ? g[2] : who.cls, num: g ? g[3] : who.num, name: n ? n[1] : who.name };
                 if (next.name !== who.name || next.num !== who.num) { last = null; section = null; }
