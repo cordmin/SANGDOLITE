@@ -36,7 +36,7 @@ async function rcAddFiles(list) {
     for (const file of list) {
         if (rcFiles.length) { showToast(`파일은 하나만 불러올 수 있어서 '${rcFiles[0].name}'만 불러왔어요.`); break; }
         const isPdf = /\.pdf$/i.test(file.name);
-        if (!isPdf && !/\.xlsx?$/i.test(file.name)) { showToast(`'${file.name}'은(는) 읽을 수 없는 파일이에요. 나이스에서 내려받은 엑셀(.xlsx, .xls)이나 PDF를 올려 주세요.`, 'error'); continue; }
+        if (!isPdf && !/\.xlsx?$/i.test(file.name)) { rcLoadFail(file.name, '엑셀(.xlsx, .xls)이나 PDF 파일만 읽을 수 있어요.\nNEIS(나이스)에서 내려받은 생활기록부 파일을 올려 주세요.'); continue; }
         try {
             let records;
             if (isPdf) {
@@ -56,9 +56,9 @@ async function rcAddFiles(list) {
                 });
             }
             if (!records.length) {
-                showToast(isPdf
-                    ? `'${file.name}'에서 학생 기록을 찾지 못했어요. 나이스에서 출력한 학교생활기록부 PDF인지 확인해 주세요. (글자를 고를 수 없는 사진 PDF는 읽을 수 없어요.)`
-                    : `'${file.name}'에서 학생 기록을 찾지 못했어요. '성명' 칸이 있는 나이스 엑셀인지 확인해 주세요.`, 'error');
+                rcLoadFail(file.name, isPdf
+                    ? 'NEIS(나이스)에서 출력한 생활기록부 PDF를 올려 주세요.'
+                    : "'성명' 칸이 있는 NEIS(나이스) 생활기록부 엑셀을 올려 주세요.");
                 continue;
             }
             rcFiles.push({ name: file.name, records, isPdf });
@@ -67,12 +67,20 @@ async function rcAddFiles(list) {
             rcResults = null;
             rcLoading(null);
         } catch (e) {
-            showToast(`'${file.name}'을(를) 읽지 못했어요. (${e.message})`, 'error');
+            rcLoadFail(file.name, `파일을 여는 중에 문제가 생겼어요.\nNEIS(나이스)에서 출력한 생활기록부 엑셀이나 PDF를 올려 주세요.\n${e.message}`);
         }
     }
     rcRenderFiles();
     rcRenderResults();
     if (rcFiles.length) rcRun(); // 불러오면 바로 점검 (맨 앞에서 이미 파일이 있으면 돌아가므로 여기 오면 새 파일)
+}
+
+// 불러오기 실패 창: 어떤 파일인지와 무엇을 올리면 되는지 알려 줌
+function rcLoadFail(name, msg) {
+    document.getElementById('rc-fail-file').textContent = name;
+    document.getElementById('rc-fail-msg').textContent = msg;
+    const dialog = document.getElementById('rc-fail-dialog');
+    if (!dialog.open) dialog.showModal();
 }
 
 // PDF 도구는 PDF를 처음 올릴 때만 불러옴 (도구만 받아 오고, 파일은 브라우저 안에서만 읽음)

@@ -189,8 +189,9 @@ td.excel-byte { background-color: #f1f5f9; padding: 12px 8px !important; }
 .rc-import { position: absolute; inset: 40px 8px 0 0; display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; padding: 24px; pointer-events: none; }
 .rc-import[hidden] { display: none; }
 .rc-import-panel { width: 580px; max-width: 100%; padding: 34px; border: 3px dashed #aebdce; border-radius: 20px; background: #f8fafc; color: #26364b; text-align: center; pointer-events: auto; transition: background-color .15s, border-color .15s; }
-.rc-import-panel h2 { margin: 0; font-size: 24px; line-height: 1.5; letter-spacing: -.6px; font-weight: 700; word-break: keep-all; }
-.rc-import-panel p { margin: 9px 0 0; font-size: 16px; line-height: 1.6; color: #475569; word-break: keep-all; }
+.rc-import-panel h2 { margin: 0; font-size: 20px; line-height: 1.5; letter-spacing: -.5px; font-weight: 700; word-break: keep-all; }
+.rc-word-excel { color: #25734b; }
+.rc-word-pdf { color: #b94646; }
 .rc-import-button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 46px; min-width: 145px; margin-top: 25px; padding: 10px 23px; border: 1px solid #334155; border-radius: 10px; background: #334155; color: #fff; font-size: 16px; font-weight: 600; line-height: 1.5; box-shadow: 0 3px 6px #172a4210; cursor: pointer; transition: background-color .15s, transform .15s; }
 .rc-import-button:hover { background: #25364d; transform: translateY(-1px); }
 .rc-import-button svg { width: 20px; height: 20px; stroke-width: 1.8; }
@@ -219,7 +220,7 @@ td.excel-byte { background-color: #f1f5f9; padding: 12px 8px !important; }
 @keyframes rc-fade { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .rc-pencil, .rc-word span { animation-duration: 3s; } }
 #rc-drop.over .rc-import-panel { background: #eef3f8; border-color: #526b89; }
-@media (max-width: 480px) { .rc-import { padding: 16px; } .rc-import-panel { padding: 28px 20px; } .rc-import-panel h2 { font-size: 22px; } }
+@media (max-width: 480px) { .rc-import { padding: 16px; } .rc-import-panel { padding: 28px 20px; } .rc-import-panel h2 { font-size: 17px; } }
 #rc-drop.over { background: #eff6ff; outline: 2px dashed #2563eb; outline-offset: -6px; }
 .rc-files { flex: 1 1 0; min-width: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 .rc-file { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; height: 34px; padding: 0 4px 0 4px; border: 1px solid #e2e8f0; border-radius: 999px; background: #f8fafc; box-shadow: inset 0 1px 0 #fff, 0 1px 2px rgba(15, 23, 42, .06); font-size: 13px; }
@@ -355,8 +356,15 @@ td.excel-byte { background-color: #f1f5f9; padding: 12px 8px !important; }
 .rc-delete-dialog h2 { font-size: 17px; font-weight: 700; margin-bottom: 10px; }
 .rc-delete-dialog p { font-size: 14px; line-height: 1.7; }
 .rc-delete-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; }
-#rc-close-dialog { text-align: center; }
-#rc-close-dialog .rc-delete-actions { justify-content: center; }
+#rc-close-dialog, .rc-fail-dialog { text-align: center; }
+#rc-close-dialog .rc-delete-actions, .rc-fail-dialog .rc-delete-actions { justify-content: center; }
+/* 한 문장씩 한 줄로: 줄바꿈(
+)을 그대로 보여 주고, 가장 긴 문장이 한 줄에 들어가게 창을 조금 넓힘 */
+.rc-fail-dialog { width: min(440px, calc(100vw - 32px)); }
+.rc-fail-title { display: inline-flex; align-items: center; gap: 6px; }
+.rc-fail-title svg { width: 22px; height: 22px; stroke-width: 2; color: #f04a4a; }
+#rc-fail-msg { white-space: pre-line; }
+.rc-fail-file { display: inline-block; max-width: 100%; margin-bottom: 10px; padding: 3px 12px; border-radius: 999px; background: #f1f5f9; font-size: 13px; color: #334155; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: top; }
 .rc-rounded-table { border: 1px solid #94a3b8; border-radius: 10px; overflow: hidden; }
 .rc-rounded-table table { border-collapse: separate; border-spacing: 0; }
 .rc-rounded-table th, .rc-rounded-table td { border: 0; border-right: 1px solid #94a3b8; border-bottom: 1px solid #94a3b8; }

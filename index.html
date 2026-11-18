@@ -14,7 +14,7 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
     
     <!-- ?v= 숫자: 파일을 고쳐 올릴 때마다 바꾸면 브라우저가 예전 파일 대신 새 파일을 받아요 -->
-    <link rel="stylesheet" href="css/style.css?v=20261119h">
+    <link rel="stylesheet" href="css/style.css?v=20261119p">
 </head>
 <body class="min-h-screen min-[1100px]:h-screen min-[1100px]:overflow-hidden bg-[#0f172a] text-[#1e293b] flex flex-col min-[1100px]:flex-row">
 
@@ -58,6 +58,17 @@
         <div class="rc-delete-actions">
             <button type="button" class="guide-btn" autofocus onclick="document.getElementById('rc-close-dialog').close()">계속 볼게요</button>
             <button type="button" class="guide-btn danger" onclick="rcConfirmClose()">종료하기</button>
+        </div>
+    </dialog>
+
+    <!-- 파일을 불러오지 못했을 때 (rcLoadFail) -->
+    <dialog id="rc-fail-dialog" class="rc-delete-dialog rc-fail-dialog" aria-labelledby="rc-fail-title" aria-describedby="rc-fail-msg">
+        <h2 id="rc-fail-title" class="rc-fail-title">앗, 파일을 읽을 수 없어요<i data-lucide="frown" aria-hidden="true"></i></h2>
+        <span id="rc-fail-file" class="rc-fail-file"></span>
+        <p id="rc-fail-msg"></p>
+        <div class="rc-delete-actions">
+            <button type="button" class="guide-btn" onclick="document.getElementById('rc-fail-dialog').close()">닫기</button>
+            <button type="button" class="guide-btn dark" autofocus onclick="document.getElementById('rc-fail-dialog').close(); document.getElementById('rc-file-input').click()">다른 파일 고르기</button>
         </div>
     </dialog>
 
@@ -329,8 +340,7 @@
                 <div id="rc-import" class="rc-import">
                     <div class="rc-import-panel">
                         <span class="rc-import-icons" aria-hidden="true"><span class="rc-import-excel"><i data-lucide="file-spreadsheet"></i><b>EXCEL</b></span><span class="rc-import-and">&amp;</span><span class="rc-import-pdf"><i data-lucide="file-text"></i><b>PDF</b></span></span>
-                        <h2>점검할 파일을 가져오세요</h2>
-                        <p>엑셀 또는 PDF 파일을 여기에 끌어다 놓으세요.</p>
+                        <h2>생기부 <span class="rc-word-excel">엑셀</span> 또는 <span class="rc-word-pdf">PDF</span> 파일을 여기로 끌어다 놓으세요.</h2>
                         <button id="rc-import-button" type="button" class="rc-import-button"><i data-lucide="folder-open" aria-hidden="true"></i>파일 선택</button>
                     </div>
                 </div>
@@ -357,10 +367,10 @@
         </div>
     </section>
 
-    <script src="js/guide-default.js?v=20261119h"></script>
-    <script src="js/app.js?v=20261119h"></script>
-    <script src="js/record-check.js?v=20261119h"></script>
-    <script src="js/record-spell.js?v=20261119h"></script>
-    <script src="js/record-check-ui.js?v=20261119h"></script>
+    <script src="js/guide-default.js?v=20261119p"></script>
+    <script src="js/app.js?v=20261119p"></script>
+    <script src="js/record-check.js?v=20261119p"></script>
+    <script src="js/record-spell.js?v=20261119p"></script>
+    <script src="js/record-check-ui.js?v=20261119p"></script>
 </body>
 </html>
