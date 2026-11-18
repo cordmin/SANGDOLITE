@@ -45,7 +45,7 @@ test('Personal API release: standalone assets, prompts and direct Gemini respons
     const ui = fs.readFileSync(path.join(release, 'js/record-check-ui.js'), 'utf8');
     assert.ok(!/GAS_WEB_APP_URL|script\.google\.com|google\.script|gasGet\(|gasPost\(|adminLogin\(|guide-page/.test(html + app + ui));
     assert.match(html, /점검 결과/);
-    assert.match(html, /설정 · 내 API 키/);
+    assert.match(html, /API키 설정/);
     for (const match of html.matchAll(/(?:src|href)="((?:assets|vendor|js|css)\/[^"?#]+)[^"]*"/g)) {
         assert.ok(fs.existsSync(path.join(release, match[1])), '배포 파일 누락: ' + match[1]);
     }
