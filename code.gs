@@ -10,11 +10,16 @@
 // ─────────────────────────────────────────────────────────────
 const PROPS = PropertiesService.getScriptProperties();
 const GUIDE_MAX_LEN = 2500; // 파트 하나의 최대 글자 수 (속성 한 칸 9KB 한도 안쪽)
+const PROPERTY_MAX_BYTES = 8500; // 속성 한 칸 9KB 한도에 여유를 두고 UTF-8 바이트로 검사
 const NO_GUIDE_MSG = '지침이 아직 없어요. 관리자 페이지에서 지침을 저장해 주세요.';
 const DEFAULT_MODEL = 'gemini-flash-lite-latest'; // 구글이 늘 최신 Flash-Lite로 연결해 주는 이름
 
 function jsonOut(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function propertyFits(text) {
+  return Utilities.newBlob(text).getBytes().length <= PROPERTY_MAX_BYTES;
 }
 
 // 화면이 프롬프트를 읽어 갈 때: ?action=guide  (아직 없으면 guide: null)
@@ -106,8 +111,8 @@ function saveCheckGuide(data) {
       const clean = {};
       f.keys.forEach(key => {
         const v = row && row[key];
-        if (key === 'allowIn') { if (Array.isArray(v) && v.length) clean.allowIn = v.map(String).slice(0, 10); }
-        else if (v !== undefined && v !== null && String(v).trim() !== '') clean[key] = String(v).trim().slice(0, 600);
+        if (key === 'allowIn') { if (Array.isArray(v) && v.length) clean.allowIn = v.map(String); }
+        else if (v !== undefined && v !== null && String(v).trim() !== '') clean[key] = String(v).trim();
       });
       if (f.need.some(key => !clean[key]) || (k === 'forbid' && !clean.words && !clean.find)) return { success: false, error: '빈 칸이 있어요. 줄을 채우거나 지워 주세요.' };
       if (k === 'limits' && (!/^[1-9]\d*$/.test(clean.max) || !Number.isSafeInteger(Number(clean.max)))) return { success: false, error: '최대 글자 수는 1 이상의 정수로 입력해 주세요.' };
@@ -118,7 +123,7 @@ function saveCheckGuide(data) {
       rows.push(clean);
     }
     const text = JSON.stringify(rows);
-    if (text.length > 8500) return { success: false, error: '점검 지침이 너무 길어요. 줄을 조금 줄여 주세요.' };
+    if (!propertyFits(text)) return { success: false, error: '점검 지침의 저장 용량을 초과했어요. 줄이나 내용을 조금 줄여 주세요. 입력한 내용은 잘라 저장하지 않습니다.' };
     toSave[f.prop] = text;
   }
   PROPS.setProperties(toSave);
@@ -158,6 +163,7 @@ function saveGuide(data) {
   }
   const toSave = { GUIDE_ORDER: JSON.stringify({ behavior: order.behavior, general: order.general }) };
   used.forEach(key => { toSave['GUIDE_PART_' + key] = JSON.stringify(parts[key]); });
+  if (Object.values(toSave).some(text => !propertyFits(text))) return { success: false, error: '생성 지침의 저장 용량을 초과했어요. 제목이나 내용을 조금 줄여 주세요.' };
   Object.keys(PROPS.getProperties()).forEach(k => {
     if (k.indexOf('GUIDE_') === 0 && !(k in toSave)) PROPS.deleteProperty(k);
   });
@@ -289,7 +295,7 @@ function generateRecordFromAI(data) {
           const lines = resultText.split('\n');
           lines.pop();
           resultText = lines.join('\n').trim();
-          if (!resultText) return { success: false, error: '생성 미완료(MAX_TOKENS)' };
+          return { success: false, partial: true, result: resultText, error: '출력 한도에 도달해 요청한 개수를 모두 생성하지 못했어요. 완성된 문단만 보관했습니다. 생성 글자 수나 개수를 줄여 다시 시도해 주세요.' };
         }
         return {
           success: true,

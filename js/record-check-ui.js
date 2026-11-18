@@ -302,7 +302,7 @@ function rcExport() {
     if (!rcResults) return;
     const rows = rcVisibleRows();
     if (!rows.length) { showModal('알림', '지금 화면에 내려받을 내용이 없어요.', 'info'); return; }
-    const head = ['이름', '학번', '항목', '기록 내용', '검토 결과', '글자 수'];
+    const head = ['이름', '학번', '항목', '기록 내용', '점검 결과', '글자 수'];
     const ws = XLSX.utils.aoa_to_sheet([head, ...rows.map(r => [
         r.rec.name, rcStudentId(r.rec), rcWhereLines(r.rec).join('\n'), r.rec.text || '(비어 있음)',
         r.shown.map(x => `[${RC_TYPES[x.type]}] ${x.why}`).join('\n'), `${getByteLength(r.rec.text)} Byte`

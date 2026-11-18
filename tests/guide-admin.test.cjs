@@ -14,6 +14,7 @@ const props = {
     deleteProperty: k => { delete store[k]; },
 };
 const ctx = vm.createContext({
+    Utilities: { newBlob: text => ({ getBytes: () => Buffer.from(text, 'utf8') }) },
     PropertiesService: { getScriptProperties: () => props },
     ContentService: { createTextOutput: t => ({ setMimeType: () => JSON.parse(t) }), MimeType: { JSON: 'json' } },
     HtmlService: { createHtmlOutput: t => t },
@@ -72,6 +73,26 @@ assert.equal(cgBack.forbid[0].words, '대회, 경진');
 assert.equal(cgBack.limits[0].key, '행동특성 및 종합의견');
 assert.ok(store.GUIDE_ORDER, '점검 지침 저장이 생성 지침을 지우면 안 됨');
 
+// 한글은 UTF-8 바이트로 제한하고, 초과 시 기존 지침 전체를 보존한다.
+assert.equal(ctx.propertyFits('가'.repeat(2833)), true);
+assert.equal(ctx.propertyFits('가'.repeat(2834)), false);
+const longWords = clone(cg);
+longWords.forbid[0].words = '가'.repeat(601) + ',토익';
+r = post({ action: 'saveCheckGuide', password: 'pw', checkGuide: longWords });
+assert.ok(r.success);
+assert.equal(r.checkGuide.forbid[0].words, longWords.forbid[0].words, '600자 이후 낱말도 보존');
+const beforeOversize = JSON.stringify(store);
+const oversized = clone(cg);
+oversized.forbid = Array.from({ length: 8 }, (_, i) => ({ label: '규칙' + i, words: '가'.repeat(400), why: '나'.repeat(400) }));
+r = post({ action: 'saveCheckGuide', password: 'pw', checkGuide: oversized });
+assert.equal(r.success, false);
+assert.match(r.error, /저장 용량/);
+assert.equal(JSON.stringify(store), beforeOversize);
+const hugeTitle = clone(ctx.GUIDE_DEFAULT);
+hugeTitle.parts.style.title = '가'.repeat(3000);
+assert.equal(post({ action: 'saveGuide', password: 'pw', guide: hugeTitle }).success, false);
+assert.equal(JSON.stringify(store), beforeOversize, '생성 지침도 용량 검사 전에 삭제하지 않음');
+
 // API 설정: 키는 가려서만 보이고, 남기기·추가·지우기와 모델 저장이 됨
 store.GEMINI_KEYS = 'TESTFIRSTKEY000000000001,TESTSECONDKEY00000000002';
 assert.equal(post({ action: 'getSettings', password: 'x' }).success, false);
@@ -88,4 +109,16 @@ assert.equal(post({ action: 'saveSettings', password: 'pw', keep: [0], add: ['sh
 assert.equal(post({ action: 'saveSettings', password: 'pw', keep: [0], add: [], model: 'bad model!' }).success, false, '이상한 모델 이름 거부');
 post({ action: 'saveSettings', password: 'pw', keep: [0, 1], add: [], model: '' });
 assert.equal(store.GEMINI_MODEL, undefined, '모델을 비우면 기본 모델');
+
+// 출력 한도로 중단된 요청은 부분 결과와 실패를 반환한다.
+ctx.UrlFetchApp = { fetch: () => ({
+    getResponseCode: () => 200,
+    getContentText: () => JSON.stringify({ candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [{ text: '완성 하나.\n완성 둘.\n미완성' }] } }] }),
+}) };
+r = post({ area: '동아리', charLimit: 250, sentenceCount: 5, cases: '관찰 내용' });
+assert.equal(r.success, false);
+assert.equal(r.partial, true);
+assert.equal(r.result, '완성 하나.\n완성 둘.');
+ctx.UrlFetchApp.fetch = () => ({ getResponseCode: () => 200, getContentText: () => JSON.stringify({ candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [{ text: '미완성' }] } }] }) });
+assert.equal(post({ area: '동아리', charLimit: 250, sentenceCount: 1, cases: '관찰 내용' }).result, '');
 console.log('Guide admin passed');

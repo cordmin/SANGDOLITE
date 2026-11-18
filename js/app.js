@@ -380,34 +380,33 @@ async function runAI() {
 
             clearInterval(progressInterval);
 
-            if (res.success) {
-                completedCount += chunk.sentenceCount;
+            if (res.success || res.partial) {
+                const cleanItems = String(res.result || '').split('\n')
+                    .map(line => line.trim().replace(/^(?:\d+[\.\)\-]*\s*)+/, '').trim())
+                    .filter(Boolean).slice(0, chunk.sentenceCount);
+                cleanItems.forEach(item => {
+                    allResults.push(item);
+                    accumulatedText += `${++completedCount}. ${item}\n`;
+                });
                 const currentProgress = Math.round((completedCount / sentenceCount) * 100);
                 loadBar.style.width = currentProgress + '%';
                 loadPercent.innerText = currentProgress + '%';
 
-                const rawLines = res.result.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-                const cleanItems = rawLines.map(line => line.replace(/^(?:\d+[\.\)\-]*\s*)+/, '').trim()).filter(l => l.length > 0);
-
-                if (cleanItems.length === 0) {
-                    const cleanRes = res.result.replace(/^(?:\d+[\.\)\-]*\s*)+/, '').trim();
-                    allResults.push(cleanRes);
-                    accumulatedText += `${completedCount - chunk.sentenceCount + 1}. ${cleanRes}\n`;
-                } else {
-                    cleanItems.forEach((item, idx) => {
-                        const cleanText = item.replace(/^(?:\d+[\.\)\-]*\s*)+/, '').trim();
-                        allResults.push(cleanText);
-                        const seqNum = completedCount - chunk.sentenceCount + idx + 1;
-                        accumulatedText += `${seqNum}. ${cleanText}\n`;
-                    });
-                }
+                if (!res.success || cleanItems.length !== chunk.sentenceCount) throw new Error(res.error || `요청한 ${chunk.sentenceCount}개 중 ${cleanItems.length}개만 생성됐어요. 생성 개수를 줄여 다시 시도해 주세요.`);
             } else {
                 throw new Error(res.error || "AI 생성 오류가 발생했습니다.");
             }
         } catch (err) {
             clearInterval(progressInterval);
             btn.disabled = false;
-            showModal('생성 실패', `생성 진행 중 오류가 발생했습니다.<br>완료된 부분까지만 보관하거나 다시 시도해주세요.<br><br>오류내용: ${translateError(err.toString())}`, 'error');
+            const actualProgress = Math.round((completedCount / sentenceCount) * 100) + '%';
+            loadBar.style.width = actualProgress;
+            loadPercent.innerText = actualProgress;
+            if (allResults.length) {
+                rawGeneratedText = accumulatedText.trim();
+                renderTable(allResults);
+            }
+            showModal('생성 실패', `요청한 ${sentenceCount}개 중 ${completedCount}개를 생성했습니다.${allResults.length ? '<br>완성된 문단은 결과 표에 보관했어요.' : ''}<br><br>${translateError(escapeHtml(err.toString()))}`, 'error');
             return;
         }
     }
@@ -719,7 +718,9 @@ function renderGuide() {
     const list = document.getElementById('guide-list');
     list.innerHTML = guideFromDefault
         ? '<div class="guide-notice">서버에 아직 지침이 없어서 처음 지침을 보여 드려요. [수정] → [저장]을 누르면 서버에 저장되고 문장 생성에 쓰여요.</div>'
-        : '';
+        : Object.entries(GUIDE_DEFAULT.parts).some(([key, part]) => part.body.replace(/\s+/g, ' ').trim() !== (guideData.parts[key]?.body || '').replace(/\s+/g, ' ').trim())
+            ? '<div class="guide-notice">서버에 저장된 지침이 현재 기본 지침과 달라요. 문장 생성에는 서버 지침이 적용됩니다. 최신 기본 지침으로 바꾸려면 [수정] → [기본값 불러오기] → [저장]을 눌러 주세요. 직접 수정한 지침도 기본값으로 바뀌므로 저장 전에 확인해 주세요.</div>'
+            : '';
     order.forEach((key, idx) => {
         const part = guideData.parts[key];
         const text = guideDrafts[key] ?? part.body;
