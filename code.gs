@@ -5,6 +5,7 @@
 //   ADMIN_PASSWORD    : 관리자 비밀번호                               ← 직접 넣음
 //   GUIDE_ORDER       : 지침 파트 순서                              ← 관리자 페이지에서 저장
 //   GUIDE_PART_<이름> : 지침 파트 하나 (제목·내용)                   ← 관리자 페이지에서 저장
+//   CHECK_FORBID / CHECK_SPELL / CHECK_LIMITS : 생활기록부 점검 지침   ← 관리자 페이지에서 저장
 // 생활기록부 지침(프롬프트)은 이 코드에 없음. 관리자 페이지에서만 고치고 금고에 저장됨.
 // ─────────────────────────────────────────────────────────────
 const PROPS = PropertiesService.getScriptProperties();
@@ -21,6 +22,9 @@ function doGet(e) {
   if (e && e.parameter && e.parameter.action === 'guide') {
     return jsonOut({ success: true, guide: loadGuide() });
   }
+  if (e && e.parameter && e.parameter.action === 'checkGuide') {
+    return jsonOut({ success: true, checkGuide: loadCheckGuide() });
+  }
   return HtmlService.createHtmlOutput('스마트 생기부 작성기 API 서버가 정상 작동 중입니다.');
 }
 
@@ -30,6 +34,7 @@ function doPost(e) {
     switch (data.action) {
       case 'login':     return jsonOut(checkPassword(data.password) ? { success: true } : { success: false, error: '비밀번호가 틀렸어요.' });
       case 'saveGuide': return jsonOut(saveGuide(data));
+      case 'saveCheckGuide': return jsonOut(saveCheckGuide(data));
       case 'getSettings':  return jsonOut(getSettings(data));
       case 'saveSettings': return jsonOut(saveSettings(data));
       default:          return jsonOut(generateRecordFromAI(data));
@@ -74,6 +79,51 @@ function saveSettings(data) {
   return getSettings(data);
 }
 
+// ── 생활기록부 점검 지침 (보조 점검의 기재 점검·맞춤법·최대 글자수). 학생 기록은 오가지 않음
+const CHECK_FIELDS = {
+  forbid: { prop: 'CHECK_FORBID', keys: ['level', 'label', 'words', 'find', 'findNote', 'why', 'allowIn', 'skip'], need: ['label'] },
+  spell:  { prop: 'CHECK_SPELL',  keys: ['wrong', 'find', 'right'], need: ['wrong', 'right'] },
+  limits: { prop: 'CHECK_LIMITS', keys: ['group', 'item', 'max', 'note', 'key'], need: ['item', 'max'] }
+};
+
+function loadCheckGuide() {
+  const saved = PROPS.getProperties();
+  if (!saved.CHECK_FORBID) return null;
+  const out = {};
+  Object.keys(CHECK_FIELDS).forEach(k => { out[k] = JSON.parse(saved[CHECK_FIELDS[k].prop] || '[]'); });
+  return out;
+}
+
+function saveCheckGuide(data) {
+  if (!checkPassword(data.password)) return { success: false, error: '비밀번호가 틀렸어요.' };
+  const g = data.checkGuide || {};
+  const toSave = {};
+  for (const k of Object.keys(CHECK_FIELDS)) {
+    const f = CHECK_FIELDS[k];
+    if (!Array.isArray(g[k])) return { success: false, error: '점검 지침 모양이 올바르지 않아요.' };
+    const rows = [];
+    for (const row of g[k]) {
+      const clean = {};
+      f.keys.forEach(key => {
+        const v = row && row[key];
+        if (key === 'allowIn') { if (Array.isArray(v) && v.length) clean.allowIn = v.map(String).slice(0, 10); }
+        else if (v !== undefined && v !== null && String(v).trim() !== '') clean[key] = String(v).trim().slice(0, 600);
+      });
+      if (f.need.some(key => !clean[key]) || (k === 'forbid' && !clean.words && !clean.find)) return { success: false, error: '빈 칸이 있어요. 줄을 채우거나 지워 주세요.' };
+      if (k === 'forbid' && clean.level !== 'check') clean.level = 'no';
+      for (const key of (k === 'limits' ? [] : ['find', 'skip'])) {
+        if (clean[key]) { try { new RegExp(clean[key]); } catch (err) { return { success: false, error: `'${clean[key]}'은(는) 찾을 말로 쓸 수 없어요.` }; } }
+      }
+      rows.push(clean);
+    }
+    const text = JSON.stringify(rows);
+    if (text.length > 8500) return { success: false, error: '점검 지침이 너무 길어요. 줄을 조금 줄여 주세요.' };
+    toSave[f.prop] = text;
+  }
+  PROPS.setProperties(toSave);
+  return { success: true, checkGuide: loadCheckGuide() };
+}
+
 // 금고에서 지침 전체를 꺼냄. 없으면 null
 function loadGuide() {
   const saved = PROPS.getProperties();
@@ -114,6 +164,8 @@ function saveGuide(data) {
   return { success: true, guide: loadGuide() };
 }
 
+const AREA_NAMES = { '자율': '자율·자치활동', '진로': '진로활동', '동아리': '동아리활동', '과세특': '과목별 세부능력 및 특기사항', '행동특성': '행동특성 및 종합의견' };
+
 // 금고의 지침에 학생 자료를 채워 AI에게 보낼 글을 만든다. 지침이 없으면 null
 function buildPrompt(data) {
   const guide = loadGuide();
@@ -132,7 +184,7 @@ ${rules}`;
     '생성 문단 개수': data.sentenceCount,
     '생성 글자 수': data.charLimit,
     '최소 글자 수': Math.round(data.charLimit * 0.85), // 생성 글자 수의 85%
-    '영역': data.area,
+    '영역': AREA_NAMES[data.area] || data.area, // 2026 기재요령 용어로
     '과목': data.subject || '해당 없음',
     '좋은태도': (data.posKeywords !== undefined ? data.posKeywords : data.keywords) || '없음',
     '아쉬운태도': data.negKeywords || '없음',

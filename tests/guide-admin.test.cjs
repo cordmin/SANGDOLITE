@@ -55,6 +55,20 @@ const built = ctx.buildPrompt({ area: '행동특성', charLimit: 250, sentenceCo
 assert.match(built, /250자를 넘지 않되 213자 이상/);
 assert.match(built, /문단 5개/);
 assert.match(built, /\{생성 글자 수\}/);
+// AI에게는 기재요령 영역 이름으로 넘어감
+assert.match(ctx.buildPrompt({ area: '과세특', charLimit: 250, sentenceCount: 1, cases: 'x' }), /'과목별 세부능력 및 특기사항' 영역/);
+// 생활기록부 점검 지침: 처음엔 없음 → 비밀번호 있어야 저장, 빈 칸·잘못된 찾을 말 거부, 저장하면 읽힘
+assert.equal(ctx.doGet({ parameter: { action: 'checkGuide' } }).checkGuide, null);
+const cg = { forbid: [{ level: 'no', label: '대회', words: '대회, 경진', why: '쓸 수 없어요.', allowIn: ['과목별 세부능력 및 특기사항'] }], spell: [{ wrong: '몇일, 몇 일', right: '며칠' }], limits: [{ group: '9. 행동특성', item: '행동특성 및 종합의견', max: '300자', key: '행동특성 및 종합의견' }] };
+assert.equal(post({ action: 'saveCheckGuide', password: 'x', checkGuide: cg }).success, false, '비밀번호');
+assert.equal(post({ action: 'saveCheckGuide', password: 'pw', checkGuide: { ...cg, spell: [{ wrong: '', right: 'a' }] } }).success, false, '빈 칸 거부');
+assert.equal(post({ action: 'saveCheckGuide', password: 'pw', checkGuide: { ...cg, forbid: [{ label: 'x', find: '(' }] } }).success, false, '잘못된 찾을 말 거부');
+assert.ok(post({ action: 'saveCheckGuide', password: 'pw', checkGuide: cg }).success);
+const cgBack = ctx.doGet({ parameter: { action: 'checkGuide' } }).checkGuide;
+assert.equal(cgBack.forbid[0].words, '대회, 경진');
+assert.equal(cgBack.limits[0].key, '행동특성 및 종합의견');
+assert.ok(store.GUIDE_ORDER, '점검 지침 저장이 생성 지침을 지우면 안 됨');
+
 // API 설정: 키는 가려서만 보이고, 남기기·추가·지우기와 모델 저장이 됨
 store.GEMINI_KEYS = 'TESTFIRSTKEY000000000001,TESTSECONDKEY00000000002';
 assert.equal(post({ action: 'getSettings', password: 'x' }).success, false);

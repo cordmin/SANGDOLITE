@@ -44,16 +44,18 @@
             <h3>2. AI 생성과 외부 전송</h3>
             <p>‘문장 생성하기’를 누르면 현재 생성 요청의 활동 영역, 활동·관찰 내용, 과목명·동아리명, 선택 키워드와 생성 옵션이 설정된 Google Apps Script 서버로 전달됩니다. 서버는 해당 내용을 포함한 프롬프트를 Google Gemini API로 보내고, 생성된 응답을 화면으로 반환합니다. 입력 내용을 화면에 적는 것만으로 AI 생성 요청이 전송되지는 않습니다.</p>
             <p>현재 소스에는 생성 요청 본문이나 응답을 별도 데이터베이스·스프레드시트에 보관하는 코드가 없습니다. 다만 요청 내용은 서버와 AI 서비스에서 처리되며, 서버 운영자는 서비스 실행·오류 기록에 접근할 수 있습니다. 서비스 제공자의 접속·보안·오류 기록 처리는 각 서비스의 정책과 운영 설정에 따릅니다.</p>
+            <p>‘생활기록부 보조 점검’에서 올린 나이스 엑셀·PDF 파일은 브라우저 안에서만 읽고 점검합니다. PDF를 처음 올릴 때 PDF 읽기 도구(cdnjs.cloudflare.com)를 받아 오지만, 파일 내용은 보내지 않습니다. 파일 내용과 점검 결과는 AI 서버나 다른 곳으로 전송되지 않으며, 새로고침하거나 탭을 닫으면 사라집니다.</p>
             <p>Google의 입력·출력 이용 방식은 API의 유료·무료 사용 조건과 계정 설정 등에 따라 달라집니다. Google은 무료 서비스에 민감정보·기밀정보·개인정보를 제출하지 않도록 안내하고, 입력·출력이 서비스 개선 및 검토에 사용될 수 있다고 명시합니다. 이 프로그램은 API의 실제 결제·보관 설정을 화면에서 확인하지 못하므로, 입력 내용이 학습에 사용되지 않는다거나 즉시 삭제된다고 보장하지 않습니다.</p>
             <p><a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener noreferrer">Gemini API 이용약관 및 데이터 이용 안내</a> · <a href="https://policies.google.com/privacy?hl=ko" target="_blank" rel="noopener noreferrer">Google 개인정보처리방침</a></p>
 
             <h3>3. 저장 위치·보유 기간·삭제</h3>
             <p>현재 화면의 입력 내용, 메뉴별 작업 상태와 생성 결과는 브라우저 메모리에서 유지됩니다. 현재 소스에는 이 작업 내용을 새로 영구 저장하는 기능이 없으며, 새로고침하거나 탭을 닫으면 작업 상태가 초기화됩니다. 다만 브라우저의 세션 복원·캐시 등 별도 기능에 따른 보관은 브라우저 설정을 따릅니다.</p>
+            <p>‘생활기록부 보조 점검’의 점검 기준(반복·비슷한 문장 기준, 켜고 끈 점검 항목, 직접 더한 표현)은 다음에 쓸 수 있도록 브라우저 저장소(record_check_settings_2026)에 저장됩니다. 학생 기록은 이곳에 저장하지 않습니다.</p>
             <p>이전 버전에서 사용한 브라우저 저장소 항목(smart_record_behavior_2026)이 남아 있을 수 있습니다. 해당 사이트의 저장 자료를 지우려면 브라우저 설정에서 이 사이트의 저장된 데이터·캐시를 삭제하세요. 직접 내려받은 엑셀, 복사한 문장, 백업·공유 파일은 별도로 삭제해야 합니다.</p>
             <p>Google 등 외부 서비스가 처리하는 자료·기록의 보유 기간과 삭제 절차는 해당 서비스의 정책 및 운영 설정에 따릅니다. 화면을 초기화하거나 탭을 닫는 것으로 이미 외부에 전송된 내용이 삭제되지는 않습니다.</p>
 
             <h3>4. 외부 통신과 국외 처리</h3>
-            <p>AI 생성에는 Google Apps Script와 Gemini API를 사용합니다. 화면을 열 때 Tailwind CSS(cdn.tailwindcss.com), Pretendard 글꼴 및 엑셀 라이브러리(cdn.jsdelivr.net), Lucide 아이콘(unpkg.com)을 외부 서버에서 불러옵니다. 이 과정에서 IP 주소, 요청 시각, 브라우저·기기 정보 등 접속 정보가 각 서비스에 전달될 수 있습니다. 글꼴·라이브러리 요청에 활동·관찰 기록을 의도적으로 포함하지는 않습니다.</p>
+            <p>AI 생성에는 Google Apps Script와 Gemini API를 사용합니다. 화면을 열 때 Tailwind CSS(cdn.tailwindcss.com), Pretendard 글꼴 및 엑셀 라이브러리(cdn.jsdelivr.net), Lucide 아이콘(unpkg.com)을 외부 서버에서 불러오고, 생활기록부 보조 점검에서 PDF를 올리면 PDF 읽기 도구(cdnjs.cloudflare.com)를 불러옵니다. 화면을 열 때는 생활기록부 점검 지침(기재 점검·맞춤법·최대 글자수)을 Google Apps Script 서버에서 받아 오며, 이때 학생 기록은 보내지 않습니다. 이 과정에서 IP 주소, 요청 시각, 브라우저·기기 정보 등 접속 정보가 각 서비스에 전달될 수 있습니다. 글꼴·라이브러리 요청에 활동·관찰 기록을 의도적으로 포함하지는 않습니다.</p>
             <p>입력 내용 및 접속 정보는 Google과 CDN 제공자의 국외 서버에서 처리될 수 있습니다. 구체적인 처리 국가·보유 기간은 서비스 및 배포 설정에 따라 달라지며 현재 프로그램에서 확정하지 않습니다. 개인정보를 외부로 전송하기 전에 이용자와 소속 학교는 적용되는 처리 근거, 외부 서비스 이용·국외 이전 요건을 확인해야 합니다. 이 방침의 열람은 필요한 동의나 학교의 승인 절차를 대신하지 않습니다.</p>
 
             <h3>5. 입력 최소화와 안전한 이용</h3>
@@ -87,19 +89,22 @@
 
         <nav class="flex flex-col gap-[9px] mt-9" aria-label="생기부 기록 영역">
             <button class="sidebar-area-btn active-main area-btn" onclick="selArea('자율', this)">
-                <i data-lucide="house-heart" aria-hidden="true"></i><span>자율 활동</span>
+                <i data-lucide="house-heart" aria-hidden="true"></i><span>자율활동</span>
             </button>
             <button class="sidebar-area-btn area-btn" onclick="selArea('진로', this)">
-                <i data-lucide="compass" aria-hidden="true"></i><span>진로 활동</span>
+                <i data-lucide="compass" aria-hidden="true"></i><span>진로활동</span>
             </button>
             <button class="sidebar-area-btn area-btn" onclick="selArea('동아리', this)">
-                <i data-lucide="volleyball" aria-hidden="true"></i><span>스포츠 / 동아리 활동</span>
+                <i data-lucide="volleyball" aria-hidden="true"></i><span>동아리활동</span>
             </button>
             <button class="sidebar-area-btn area-btn" onclick="selArea('과세특', this)">
                 <i data-lucide="book-open" aria-hidden="true"></i><span>과목별 세부 특기사항</span>
             </button>
             <button class="sidebar-area-btn area-btn" onclick="selArea('행동특성', this)">
                 <i data-lucide="user-pen" aria-hidden="true"></i><span>행동특성 및 종합의견</span>
+            </button>
+            <button class="sidebar-area-btn area-btn" onclick="openCheck(this)">
+                <i data-lucide="clipboard-check" aria-hidden="true"></i><span>생활기록부 보조 점검</span>
             </button>
         </nav>
         <div class="sidebar-footer relative mt-auto pt-11 text-center">
@@ -126,7 +131,6 @@
                         <div class="flex flex-col gap-1.5">
                             <label class="text-[13px] font-bold text-slate-700">생성 글자 수 (바이트)</label>
                             <select id="char-select" onchange="selChar(parseInt(this.value))" class="nice-select w-[190px] h-[38px] px-3 border border-slate-400 rounded-lg text-sm bg-white focus:outline-none focus:border-[#334155] font-bold cursor-pointer">
-                                <option value="125">125자 (약 375byte)</option>
                                 <option value="250">250자 (약 750byte)</option>
                                 <option value="500">500자 (약 1500byte)</option>
                             </select>
@@ -189,12 +193,12 @@
         <div class="bg-white p-[17px] rounded-2xl shadow-sm border border-slate-200 flex flex-col flex-1 h-[75vh] min-h-[520px] min-[1100px]:h-auto min-[1100px]:min-h-0">
             <div class="flex flex-wrap justify-between items-center gap-2 gap-y-3 min-[1100px]:h-[34px] shrink-0 -translate-y-2">
                 <div class="step-group self-end translate-y-[10px] order-last basis-full min-[1100px]:order-none min-[1100px]:basis-auto"><div class="step-label">문장 생성 결과</div></div>
-                <button onclick="runAI()" id="run-btn" class="ml-auto relative overflow-hidden shrink-0 min-w-[128px] justify-center bg-[#334155] text-[#FFFFFF] px-4 h-[30px] inline-flex items-center rounded-xl text-sm font-bold leading-none shadow-sm hover:bg-[#253141] transition-all">
+                <button onclick="runAI()" id="run-btn" class="min-[1100px]:translate-y-[9px] ml-auto relative overflow-hidden shrink-0 min-w-[128px] justify-center bg-[#334155] text-[#FFFFFF] px-4 h-[30px] inline-flex items-center rounded-xl text-sm font-bold leading-none shadow-sm hover:bg-[#253141] transition-all">
                     <span id="loading-bar" class="run-progress absolute inset-y-0 left-0 bg-[#334155] transition-all duration-300 ease-out" style="width: 0%;"></span>
                     <span class="run-label relative">✨ 문장 생성하기</span>
                     <span id="loading-percent" class="run-progress relative font-mono">0%</span>
                 </button>
-                <button id="btn-export-result" onclick="exportExcel('result-table', '생기부_' + area + '_AI결과')" class="bg-[#1D6F42] text-white px-4 h-[30px] inline-flex items-center gap-2 rounded-xl text-sm font-bold leading-none hover:bg-[#145232] transition-colors shadow-sm"><i data-lucide="file-spreadsheet" class="w-[18px] h-[18px]" stroke-width="1.8" aria-hidden="true"></i>결과 내려받기</button>
+                <button id="btn-export-result" onclick="exportExcel('result-table', '생기부_' + area + '_AI결과')" class="min-[1100px]:translate-y-[9px] bg-[#1D6F42] text-white px-4 h-[30px] inline-flex items-center gap-2 rounded-xl text-sm font-bold leading-none hover:bg-[#145232] transition-colors shadow-sm"><i data-lucide="file-spreadsheet" class="w-[18px] h-[18px]" stroke-width="1.8" aria-hidden="true"></i>결과 내려받기</button>
             </div>
 
 
@@ -225,7 +229,6 @@
                 </table>
               </div>
             </div>
-            
         </div>
 
     </section>
@@ -237,6 +240,7 @@
                 <div class="guide-switch" role="tablist" aria-label="지침 종류">
                     <button type="button" data-guide="behavior" onclick="showGuideKind('behavior')">행동특성 지침</button>
                     <button type="button" data-guide="general" onclick="showGuideKind('general')">자율·진로·동아리·과세특 지침</button>
+                    <button type="button" data-guide="check" onclick="showGuideKind('check')">생활기록부 점검 지침</button>
                     <button type="button" data-guide="settings" onclick="showGuideKind('settings')">API 설정</button>
                 </div>
                 <div id="guide-actions" class="ml-auto flex flex-wrap items-center gap-2"></div>
@@ -245,7 +249,75 @@
         </div>
     </section>
 
+    <!-- 5. 생활기록부 보조 점검: 가운데 = 파일·점검 기준, 오른쪽 = 점검 결과 (파일은 브라우저 안에서만 읽음) -->
+    <main id="check-main" class="autonomy-layout check-part hidden-element min-[1100px]:flex-[0_1_640px] min-[1100px]:min-w-[380px] px-3 pb-3 min-[1100px]:py-6 min-[1100px]:pl-0 min-[1100px]:pr-[7px] flex flex-col min-h-0">
+        <section class="w-full h-full bg-white p-[17px] rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-6 flex-1 min-h-0 overflow-hidden">
+            <div class="step-group shrink-0">
+                <div class="step-label">파일 업로드</div>
+                <div class="set-box flex flex-col gap-3">
+                    <div id="rc-drop" class="rc-drop" role="button" tabindex="0" aria-label="나이스 엑셀·PDF 파일 고르기">
+                        <i data-lucide="file-spreadsheet" aria-hidden="true"></i>
+                        <strong>엑셀 또는 PDF 파일을 드래그해서 놓으세요</strong>
+                    </div>
+                    <input type="file" id="rc-file-input" accept=".xlsx,.xls,.pdf" multiple hidden>
+                    <div id="rc-file-list" class="flex flex-col gap-2"></div>
+                    <p id="rc-file-msg" class="rc-msg" role="status"></p>
+                </div>
+            </div>
+
+            <div class="step-group flex-1 flex flex-col min-h-0">
+                <div class="step-label">점검 기준</div>
+                <div class="set-box flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col gap-2">
+                    <details class="rc-acc" open>
+                        <summary>점검 항목 고르기</summary>
+                        <div class="rc-acc-body"><div id="rc-types" class="rc-types"></div></div>
+                    </details>
+                    <details class="rc-acc">
+                        <summary>반복 표현 · 비슷한 문장</summary>
+                        <div class="rc-acc-body">
+                            <label class="rc-field"><span>같은 낱말을 몇 번 넘게 쓰면 알려 줄까요?</span><span class="rc-input-unit"><input id="rc-repeat-min" type="number" min="2" max="10" class="set-input"><em>번 이상</em></span></label>
+                            <label class="rc-field"><span>다른 학생 기록과 얼마나 비슷하면 알려 줄까요?</span><span class="rc-input-unit"><input id="rc-similar-min" type="number" min="30" max="100" class="set-input"><em>% 이상</em></span></label>
+                        </div>
+                    </details>
+                    <details class="rc-acc">
+                        <summary>내가 더하는 기재할 수 없는 표현</summary>
+                        <div class="rc-acc-body">
+                            <p class="rc-help">한 줄에 하나씩 적어 주세요. 기록에서 이 말이 나오면 알려 드려요. 이 브라우저에만 저장돼요.</p>
+                            <textarea id="rc-custom-words" rows="5" class="set-input !h-auto py-2 leading-relaxed" placeholder="예: ○○학원&#10;○○캠프"></textarea>
+                        </div>
+                    </details>
+                    <div class="flex justify-end mt-1">
+                        <button type="button" onclick="rcResetSettings()" class="guide-btn">처음 기준으로</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <section id="check-result" class="check-part hidden-element flex-1 min-[1100px]:min-w-[490px] px-3 pb-6 min-[1100px]:py-6 min-[1100px]:pr-[19px] min-[1100px]:pl-[5px] flex flex-col min-h-0">
+        <div class="bg-white p-[17px] rounded-2xl shadow-sm border border-slate-200 flex flex-col flex-1 gap-3 h-[75vh] min-h-[520px] min-[1100px]:h-auto min-[1100px]:min-h-0">
+            <div class="flex flex-wrap justify-between items-center gap-2 gap-y-3 min-[1100px]:h-[34px] shrink-0 -translate-y-2">
+                <div class="step-group self-end translate-y-[10px] order-last basis-full min-[1100px]:order-none min-[1100px]:basis-auto"><div class="step-label">점검 결과</div></div>
+                <button id="rc-run-btn" type="button" onclick="rcRun()" disabled class="min-[1100px]:translate-y-[9px] ml-auto shrink-0 bg-[#334155] text-white px-4 h-[30px] inline-flex items-center gap-2 rounded-xl text-sm font-bold leading-none shadow-sm hover:bg-[#253141] transition-all disabled:bg-slate-300 disabled:cursor-not-allowed"><i data-lucide="search-check" class="w-[17px] h-[17px]" aria-hidden="true"></i>점검하기</button>
+                <button id="rc-export-btn" type="button" onclick="rcExport()" disabled class="min-[1100px]:translate-y-[9px] bg-[#1D6F42] text-white px-4 h-[30px] inline-flex items-center gap-2 rounded-xl text-sm font-bold leading-none hover:bg-[#145232] transition-colors shadow-sm disabled:bg-slate-300 disabled:cursor-not-allowed"><i data-lucide="file-spreadsheet" class="w-[18px] h-[18px]" stroke-width="1.8" aria-hidden="true"></i>결과 내려받기</button>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+                <div id="rc-tabs" class="guide-switch rc-tabs" role="tablist" aria-label="점검 항목"></div>
+                <input id="rc-search" type="search" oninput="rcSearch(this.value)" placeholder="학생 이름·과목으로 찾기" class="set-input ml-auto !w-[190px] !h-[34px]">
+            </div>
+            <div class="relative flex-1 min-h-0 overflow-auto custom-scrollbar rounded-xl border border-[#334155]">
+                <table class="excel-table rc-table" style="table-layout: fixed; min-width: 640px; height: 100%;">
+                    <colgroup><col style="width:44px"><col style="width:130px"><col><col style="width:220px"><col style="width:86px"></colgroup>
+                    <thead><tr><th class="excel-num">순</th><th>학생</th><th>기록 내용</th><th>고칠 점</th><th class="excel-byte">글자 수</th></tr></thead>
+                    <tbody id="rc-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
     <script src="js/guide-default.js"></script>
     <script src="js/app.js"></script>
+    <script src="js/record-check.js"></script>
+    <script src="js/record-check-ui.js"></script>
 </body>
 </html>
