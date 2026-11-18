@@ -14,7 +14,7 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
     
     <!-- ?v= 숫자: 파일을 고쳐 올릴 때마다 바꾸면 브라우저가 예전 파일 대신 새 파일을 받아요 -->
-    <link rel="stylesheet" href="css/style.css?v=20261119b">
+    <link rel="stylesheet" href="css/style.css?v=20261119e">
 </head>
 <body class="min-h-screen min-[1100px]:h-screen min-[1100px]:overflow-hidden bg-[#0f172a] text-[#1e293b] flex flex-col min-[1100px]:flex-row">
 
@@ -57,7 +57,7 @@
         <p id="rc-close-description"></p>
         <div class="rc-delete-actions">
             <button type="button" class="guide-btn" autofocus onclick="document.getElementById('rc-close-dialog').close()">계속 볼게요</button>
-            <button type="button" class="guide-btn dark" onclick="rcConfirmClose()">종료하기</button>
+            <button type="button" class="guide-btn danger" onclick="rcConfirmClose()">종료하기</button>
         </div>
     </dialog>
 
@@ -315,7 +315,7 @@
     <section id="check-result" class="check-part hidden-element flex-1 min-[1100px]:min-w-[490px] px-3 pb-6 min-[1100px]:py-6 min-[1100px]:pr-[19px] min-[1100px]:pl-0 flex flex-col min-h-0">
         <div class="bg-white p-[17px] pt-[14px] rounded-2xl shadow-sm border border-slate-200 flex flex-col flex-1 h-[75vh] min-h-[520px] min-[1100px]:h-auto min-[1100px]:min-h-0">
             <div class="rc-result-toolbar flex flex-wrap items-center gap-2 shrink-0 mb-[8px]">
-                <button id="rc-export-btn" type="button" onclick="rcExport()" disabled class="bg-[#1D6F42] text-white px-4 h-[34px] inline-flex items-center gap-2 rounded-xl text-sm font-bold leading-none hover:bg-[#145232] transition-colors shadow-sm"><i data-lucide="file-spreadsheet" class="w-[18px] h-[18px]" stroke-width="1.8" aria-hidden="true"></i>결과 내려받기</button>
+                <button id="rc-export-btn" type="button" onclick="rcExport()" disabled class="bg-[#1D6F42] text-white px-4 h-[34px] inline-flex items-center gap-2 rounded-xl text-sm font-bold leading-none hover:bg-[#145232] transition-colors shadow-sm"><i data-lucide="file-spreadsheet" class="w-[18px] h-[18px]" stroke-width="1.8" aria-hidden="true"></i>점검결과 내려받기</button>
                 <div id="rc-file-list" class="rc-files" aria-label="불러온 파일"></div>
                 <select id="rc-type-filter" class="nice-select rc-type-filter" aria-label="점검 항목 필터" onchange="rcTab=this.value;rcRenderResults()"><option value="all">전체</option></select>
                 <label class="rc-result-search">
@@ -357,10 +357,10 @@
         </div>
     </section>
 
-    <script src="js/guide-default.js?v=20261119b"></script>
-    <script src="js/app.js?v=20261119b"></script>
-    <script src="js/record-check.js?v=20261119b"></script>
-    <script src="js/record-spell.js?v=20261119b"></script>
-    <script src="js/record-check-ui.js?v=20261119b"></script>
+    <script src="js/guide-default.js?v=20261119e"></script>
+    <script src="js/app.js?v=20261119e"></script>
+    <script src="js/record-check.js?v=20261119e"></script>
+    <script src="js/record-spell.js?v=20261119e"></script>
+    <script src="js/record-check-ui.js?v=20261119e"></script>
 </body>
 </html>

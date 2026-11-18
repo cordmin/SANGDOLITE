@@ -132,6 +132,7 @@ td.excel-byte { background-color: #f1f5f9; padding: 12px 8px !important; }
 .guide-var { display: inline-block; padding: 0 6px; border-radius: 6px; background: #dbeafe; color: #1e40af; font-weight: 700; font-size: 13px; }
 .guide-btn { height: 32px; padding: 0 12px; border-radius: 10px; font-size: 13px; font-weight: 700; border: 1px solid #cbd5e1; background: #fff; color: #334155; }
 .guide-btn.dark { background: #334155; border-color: #334155; color: #fff; }
+.guide-btn.danger { background: #f04a4a; border-color: #f04a4a; color: #fff; }
 .guide-btn:hover { filter: brightness(0.96); }
 
 /* 관리자 진입: 사이드바 아래 흐린 톱니 → 비밀번호 */
@@ -227,9 +228,9 @@ td.excel-byte { background-color: #f1f5f9; padding: 12px 8px !important; }
 .rc-file-icon svg { width: 15px; height: 15px; }
 .rc-file-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; color: #1e293b; }
 .rc-file-count { flex-shrink: 0; padding-left: 8px; border-left: 1px solid #e2e8f0; font-size: 12px; font-weight: 600; color: #64748b; font-variant-numeric: tabular-nums; }
-.rc-file button { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%; color: #94a3b8; transition: background-color .15s, color .15s; }
+.rc-file button { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%; color: #f04a4a; transition: background-color .15s, color .15s; }
 .rc-file button svg { width: 14px; height: 14px; }
-.rc-file button:hover { background: #e2e8f0; color: #334155; }
+.rc-file button:hover { background: #fee2e2; color: #b91c1c; }
 .rc-file button:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
 .rc-table td { vertical-align: top; font-size: 14px; padding: 10px 12px; }
 .rc-table .rc-who b { display: block; font-weight: 700; color: #1e293b; }
@@ -352,6 +353,8 @@ td.excel-byte { background-color: #f1f5f9; padding: 12px 8px !important; }
 .rc-delete-dialog h2 { font-size: 17px; font-weight: 700; margin-bottom: 10px; }
 .rc-delete-dialog p { font-size: 14px; line-height: 1.7; }
 .rc-delete-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; }
+#rc-close-dialog { text-align: center; }
+#rc-close-dialog .rc-delete-actions { justify-content: center; }
 .rc-rounded-table { border: 1px solid #94a3b8; border-radius: 10px; overflow: hidden; }
 .rc-rounded-table table { border-collapse: separate; border-spacing: 0; }
 .rc-rounded-table th, .rc-rounded-table td { border: 0; border-right: 1px solid #94a3b8; border-bottom: 1px solid #94a3b8; }
