@@ -110,6 +110,7 @@ function saveCheckGuide(data) {
         else if (v !== undefined && v !== null && String(v).trim() !== '') clean[key] = String(v).trim().slice(0, 600);
       });
       if (f.need.some(key => !clean[key]) || (k === 'forbid' && !clean.words && !clean.find)) return { success: false, error: '빈 칸이 있어요. 줄을 채우거나 지워 주세요.' };
+      if (k === 'limits' && (!/^[1-9]\d*$/.test(clean.max) || !Number.isSafeInteger(Number(clean.max)))) return { success: false, error: '최대 글자 수는 1 이상의 정수로 입력해 주세요.' };
       if (k === 'forbid' && clean.level !== 'check') clean.level = 'no';
       for (const key of (k === 'limits' ? [] : ['find', 'skip'])) {
         if (clean[key]) { try { new RegExp(clean[key]); } catch (err) { return { success: false, error: `'${clean[key]}'은(는) 찾을 말로 쓸 수 없어요.` }; } }

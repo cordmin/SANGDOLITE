@@ -14,7 +14,7 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
     
     <!-- ?v= 숫자: 파일을 고쳐 올릴 때마다 바꾸면 브라우저가 예전 파일 대신 새 파일을 받아요 -->
-    <link rel="stylesheet" href="css/style.css?v=20261118">
+    <link rel="stylesheet" href="css/style.css?v=20261118t">
 </head>
 <body class="min-h-screen min-[1100px]:h-screen min-[1100px]:overflow-hidden bg-[#0f172a] text-[#1e293b] flex flex-col min-[1100px]:flex-row">
 
@@ -28,30 +28,69 @@
         </div>
     </div>
 
-    <dialog id="privacy-dialog" aria-labelledby="privacy-title" class="w-[min(720px,calc(100%-32px))] max-h-[85vh] m-auto rounded-2xl border border-slate-200 p-0 bg-white text-slate-700 shadow-2xl overflow-hidden open:flex flex-col">
-        <div class="shrink-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between gap-4">
-            <h2 id="privacy-title" class="text-lg font-bold text-slate-800">개인정보 처리방침</h2>
-            <form method="dialog"><button autofocus class="px-4 py-2 rounded-lg bg-slate-800 text-white text-sm font-bold">닫기</button></form>
+    <dialog id="rc-guide-help-dialog" class="rc-guide-help-dialog" aria-labelledby="rc-guide-help-title">
+        <header class="rc-guide-help-header">
+            <h2 id="rc-guide-help-title">기재 점검 도움말</h2>
+            <form method="dialog"><button type="submit" class="rc-help-close" aria-label="도움말 닫기"><i data-lucide="x" aria-hidden="true"></i></button></form>
+        </header>
+        <div class="rc-guide-help-content">
+            <table class="rc-help-table"><tbody>
+                <tr><th scope="row">쉼표 구분</th><td>여러 표현을 한 곳에 쉼표로 구분하여 입력하면 모두 찾습니다.<p class="rc-help-example">예: 토익, 토플, 텝스</p></td></tr>
+                <tr><th scope="row">띄어쓰기</th><td>띄어 쓴 낱말은 붙여 쓴 형태도 찾습니다.<p class="rc-help-example">예: 인터넷 강의 → '인터넷강의', '인터넷 강의' 둘 다 찾습니다.</p></td></tr>
+                <tr><th scope="row">자동 규칙</th><td>해당 단어가 많아 목록에 모두 나열하기 어려운 경우에 적용됩니다.<p class="rc-help-example">예: 대학교 이름, 기관·단체 이름, ‘기능사’로 끝나는 자격증 이름</p></td></tr>
+            </tbody></table>
         </div>
-        <div class="privacy-copy min-h-0 overflow-y-auto custom-scrollbar px-6 pt-5 pb-7 text-sm leading-relaxed">
+        <form method="dialog" class="rc-guide-help-footer"><button type="submit" class="guide-btn dark" autofocus>확인</button></form>
+    </dialog>
+
+    <dialog id="rc-delete-dialog" class="rc-delete-dialog" aria-labelledby="rc-delete-title" aria-describedby="rc-delete-description">
+        <h2 id="rc-delete-title">규칙을 삭제할까요?</h2>
+        <p id="rc-delete-description"></p>
+        <div class="rc-delete-actions">
+            <button type="button" class="guide-btn" autofocus onclick="document.getElementById('rc-delete-dialog').close()">취소</button>
+            <button type="button" class="guide-btn dark" onclick="rcConfirmDraftRemoval()">삭제</button>
+        </div>
+    </dialog>
+
+    <dialog id="rc-close-dialog" class="rc-delete-dialog" aria-labelledby="rc-close-title" aria-describedby="rc-close-description">
+        <h2 id="rc-close-title">생활기록부 점검을 마치셨나요?</h2>
+        <p id="rc-close-description"></p>
+        <div class="rc-delete-actions">
+            <button type="button" class="guide-btn" autofocus onclick="document.getElementById('rc-close-dialog').close()">계속 볼게요</button>
+            <button type="button" class="guide-btn dark" onclick="rcConfirmClose()">네, 마쳤어요</button>
+        </div>
+    </dialog>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <dialog id="privacy-dialog" aria-labelledby="privacy-title" class="legal-dialog">
+        <div class="rc-guide-help-header">
+            <h2 id="privacy-title">개인정보 처리방침</h2>
+            <form method="dialog"><button autofocus class="rc-help-close" aria-label="개인정보 처리방침 닫기"><i data-lucide="x" aria-hidden="true"></i></button></form>
+        </div>
+        <div class="privacy-copy legal-copy custom-scrollbar">
             <p class="font-bold text-slate-800">생활기록부 도우미 개인정보 처리방침</p>
-            <p>시행일: 2026년 11월 17일<br>제공자: 이경민 (충남교육청 교사)</p>
+            <p>시행일: 2026년 11월 18일<br>제공자: 이경민 (충남교육청 교사)</p>
             <p class="mt-4 p-4 rounded-lg bg-blue-50 text-blue-900">AI 문장 생성 시 입력한 활동 내용·관찰 기록 등이 Google Apps Script 서버를 거쳐 Google Gemini API로 전송됩니다. 학생 이름, 연락처, 학번 등 식별정보와 민감하거나 비밀인 내용은 입력하지 마세요. 입력 내용을 자동으로 익명화하는 기능은 없습니다.</p>
 
             <h3>1. 처리 목적과 항목</h3>
             <p>교사가 학생의 활동 및 관찰 내용을 바탕으로 생활기록부 문장 초안을 작성하고, 결과를 확인·수정·엑셀로 저장하도록 돕습니다. 활동 영역, 선택·직접 입력한 활동 내용, 학생 관찰 기록, 과목명·동아리명, 선택한 생활 태도 키워드, 생성 글자 수와 문장 개수, 생성 결과를 처리합니다. 자유 입력 내용에 개인정보가 포함되면 그 정보도 처리 대상이 될 수 있습니다.</p>
+            <p>생활기록부 보조 점검에서는 사용자가 선택하거나 끌어다 놓은 엑셀·PDF의 파일명, 학생 성명·학년·반·번호, 영역·과목, 기록 내용과 점검 결과를 해당 브라우저에서 처리합니다. 파일을 선택하는 것만으로 AI 문장 생성 요청이 실행되지는 않습니다.</p>
             <p>이 프로그램은 교사를 위한 작성 보조 도구입니다. 학생을 자동으로 평가·선발하거나 공식 기록을 확정하지 않으며, 생성 결과의 사실관계와 적정성은 교사가 검토해야 합니다.</p>
 
             <h3>2. AI 생성과 외부 전송</h3>
             <p>‘문장 생성하기’를 누르면 현재 생성 요청의 활동 영역, 활동·관찰 내용, 과목명·동아리명, 선택 키워드와 생성 옵션이 설정된 Google Apps Script 서버로 전달됩니다. 서버는 해당 내용을 포함한 프롬프트를 Google Gemini API로 보내고, 생성된 응답을 화면으로 반환합니다. 입력 내용을 화면에 적는 것만으로 AI 생성 요청이 전송되지는 않습니다.</p>
             <p>현재 소스에는 생성 요청 본문이나 응답을 별도 데이터베이스·스프레드시트에 보관하는 코드가 없습니다. 다만 요청 내용은 서버와 AI 서비스에서 처리되며, 서버 운영자는 서비스 실행·오류 기록에 접근할 수 있습니다. 서비스 제공자의 접속·보안·오류 기록 처리는 각 서비스의 정책과 운영 설정에 따릅니다.</p>
-            <p>‘생활기록부 보조 점검’에서 올린 나이스 엑셀·PDF 파일은 브라우저 안에서만 읽고 점검합니다. PDF를 처음 올릴 때 PDF 읽기 도구(cdnjs.cloudflare.com)를 받아 오지만, 파일 내용은 보내지 않습니다. 파일 내용과 점검 결과는 AI 서버나 다른 곳으로 전송되지 않으며, 새로고침하거나 탭을 닫으면 사라집니다.</p>
+            <p>‘생활기록부 보조 점검’으로 가져온 나이스 엑셀·PDF 파일은 브라우저에서 텍스트를 추출하여 점검합니다. 맞춤법은 이 사이트에 포함된 Hunspell 한국어 사전과 검사 엔진을 사용합니다. PDF 읽기 도구와 사전·검사 엔진을 내려받는 통신은 발생하지만, 가져온 파일·추출한 학생 기록·점검 결과를 Google Apps Script, Gemini API 또는 외부 맞춤법 서비스로 보내지는 않습니다.</p>
             <p>Google의 입력·출력 이용 방식은 API의 유료·무료 사용 조건과 계정 설정 등에 따라 달라집니다. Google은 무료 서비스에 민감정보·기밀정보·개인정보를 제출하지 않도록 안내하고, 입력·출력이 서비스 개선 및 검토에 사용될 수 있다고 명시합니다. 이 프로그램은 API의 실제 결제·보관 설정을 화면에서 확인하지 못하므로, 입력 내용이 학습에 사용되지 않는다거나 즉시 삭제된다고 보장하지 않습니다.</p>
             <p><a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener noreferrer">Gemini API 이용약관 및 데이터 이용 안내</a> · <a href="https://policies.google.com/privacy?hl=ko" target="_blank" rel="noopener noreferrer">Google 개인정보처리방침</a></p>
 
             <h3>3. 저장 위치·보유 기간·삭제</h3>
             <p>현재 화면의 입력 내용, 메뉴별 작업 상태와 생성 결과는 브라우저 메모리에서 유지됩니다. 현재 소스에는 이 작업 내용을 새로 영구 저장하는 기능이 없으며, 새로고침하거나 탭을 닫으면 작업 상태가 초기화됩니다. 다만 브라우저의 세션 복원·캐시 등 별도 기능에 따른 보관은 브라우저 설정을 따릅니다.</p>
-            <p>‘생활기록부 보조 점검’의 점검 기준(반복·비슷한 문장 기준, 켜고 끈 점검 항목, 직접 더한 표현)은 다음에 쓸 수 있도록 브라우저 저장소(record_check_settings_2026)에 저장됩니다. 학생 기록은 이곳에 저장하지 않습니다.</p>
+            <p>‘생활기록부 보조 점검’의 점검 기준(켜고 끈 점검 항목)은 다음에 쓸 수 있도록 브라우저 저장소(record_check_settings_2026)에 저장됩니다. 학생 기록은 이곳에 저장하지 않습니다.</p>
+            <p>가져온 파일과 점검 결과, 맞춤법 검사 중 임시로 보관하는 낱말·추천어는 브라우저 메모리에서 처리하며, 새로고침하거나 탭을 닫으면 현재 프로그램의 메모리 상태가 초기화됩니다. 파일 목록에서 파일을 빼는 것만으로 맞춤법 작업 스레드의 낱말 캐시까지 즉시 지워지는 것은 아닙니다.</p>
+            <p>관리자가 저장하는 문장 생성 지침, 기재 점검·맞춤법 보완 규칙·최대 글자 수 기준, AI 모델 설정과 API 키는 Google Apps Script의 스크립트 속성에 보관됩니다. 관리자 비밀번호는 인증 요청 시 해당 서버로 전달되며, 브라우저 메모리에 유지되는 관리자 인증 정보는 탭을 닫거나 새로고침하면 초기화됩니다. 관리자가 지침이나 설정에 학생 개인정보를 넣지 않도록 주의해야 합니다.</p>
+            <p>맞춤법 보조 점검은 이 사이트에 포함된 <a href="https://github.com/spellcheck-ko/hunspell-dict-ko/tree/0.7.94" target="_blank" rel="noopener noreferrer">Hunspell 한국어 사전 0.7.94</a>과 <a href="https://github.com/rotemdan/hunspell-wasm" target="_blank" rel="noopener noreferrer">hunspell-wasm</a>으로 브라우저 안에서 처리합니다. 외부 맞춤법 서비스로 학생 기록을 전송하지 않습니다. 사전의 출처와 이용 조건은 <a href="assets/hunspell-ko/LICENSE.md" target="_blank" rel="noopener noreferrer">라이선스 안내</a>를 참고하세요.</p>
             <p>이전 버전에서 사용한 브라우저 저장소 항목(smart_record_behavior_2026)이 남아 있을 수 있습니다. 해당 사이트의 저장 자료를 지우려면 브라우저 설정에서 이 사이트의 저장된 데이터·캐시를 삭제하세요. 직접 내려받은 엑셀, 복사한 문장, 백업·공유 파일은 별도로 삭제해야 합니다.</p>
             <p>Google 등 외부 서비스가 처리하는 자료·기록의 보유 기간과 삭제 절차는 해당 서비스의 정책 및 운영 설정에 따릅니다. 화면을 초기화하거나 탭을 닫는 것으로 이미 외부에 전송된 내용이 삭제되지는 않습니다.</p>
 
@@ -61,7 +100,7 @@
 
             <h3>5. 입력 최소화와 안전한 이용</h3>
             <p>이름, 학번, 연락처, 주소, 주민등록번호, 가족 정보, 건강·상담·장애 등 민감하거나 학생을 알아볼 수 있는 세부사항을 제외하고, 문장 작성에 필요한 일반화된 활동만 입력하세요. 이름을 빼더라도 내용의 조합으로 학생을 식별할 수 있습니다. 프로그램은 이를 자동으로 탐지하거나 제거하지 않습니다.</p>
-            <p>프로그램 자체에는 사용자별 로그인, 파일 암호화, 접근 권한 관리 기능이 없습니다. 교사와 학교는 기기 잠금, 파일 접근·공유 범위, 보유 기간과 파기를 관리해야 합니다. 문의 시 학생 자료가 담긴 파일·화면·로그를 공개 게시판에 올리지 마세요.</p>
+            <p>프로그램에는 설정 수정을 위한 관리자 비밀번호 인증이 있지만, 일반 이용자별 계정이나 학생 파일에 대한 권한 관리·별도 암호화 기능은 없습니다. 교사와 학교는 기기 잠금, 파일 접근·공유 범위, 보유 기간과 파기를 관리해야 합니다. 문의 시 학생 자료가 담긴 파일·화면·로그를 공개 게시판에 올리지 마세요.</p>
 
             <h3>6. 학생·보호자의 권리와 문의</h3>
             <p>학생 또는 정당한 보호자·대리인은 소속 학교의 개인정보 담당자에게 자료의 열람·정정·삭제·처리정지를 요청할 수 있습니다. 만 14세 미만 학생의 자료를 포함해 학교 업무에 사용하는 자료의 처리 근거와 필요한 절차는 학교에서 확인해야 합니다.</p>
@@ -69,7 +108,27 @@
             <p>프로그램 처리 방식 관련 문의: 이경민 (충남교육청 교사)<br>이메일: <a href="mailto:leekyunggo@ai.cne.go.kr">leekyunggo@ai.cne.go.kr</a></p>
 
             <h3>7. 방침 변경</h3>
-            <p>이 방침은 위 시행일부터 적용됩니다. 처리 항목, 외부 전송, 저장 방식 등 내용이 변경되면 프로그램 안의 이 방침에 변경 내용과 시행일을 반영합니다.</p>
+            <p>이 방침은 위 시행일부터 적용됩니다. 이번 변경에서는 엑셀·PDF 파일의 로컬 추출·점검, 맞춤법 임시 캐시, 관리자 설정의 저장 위치를 구체화했습니다. 처리 항목, 외부 전송, 저장 방식 등 내용이 변경되면 프로그램 안의 이 방침에 변경 내용과 시행일을 반영합니다.</p>
+        </div>
+    </dialog>
+
+    <dialog id="license-dialog" class="legal-dialog" aria-labelledby="license-title">
+        <header class="rc-guide-help-header">
+            <h2 id="license-title">저작권 및 오픈소스 라이선스</h2>
+            <form method="dialog"><button class="rc-help-close" aria-label="라이선스 안내 닫기" autofocus><i data-lucide="x" aria-hidden="true"></i></button></form>
+        </header>
+        <div class="legal-copy custom-scrollbar">
+            <p>생활기록부 도우미 · © 2026 이경민</p>
+            <p>이 프로그램에서 사용하는 외부 소프트웨어·사전·글꼴의 저작권은 각 권리자에게 있으며, 해당 구성요소에는 각각의 라이선스가 적용됩니다.</p>
+            <dl class="license-list">
+                <div><dt>Hunspell 한국어 사전 0.7.94</dt><dd>hunspell-dict-ko 기여자 및 국립국어원. 포함된 ko.aff·ko.dic 결과물은 GPL-3.0-or-later로 제공됩니다. 원본 데이터별 조건은 상세 안내를 참고하세요.<br><a href="https://github.com/spellcheck-ko/hunspell-dict-ko/tree/0.7.94" target="_blank" rel="noopener noreferrer">원본 소스</a> · <a href="assets/hunspell-ko/LICENSE.md" target="_blank" rel="noopener noreferrer">저작권·상세 조건</a> · <a href="assets/hunspell-ko/LICENSE.GPL-3" target="_blank" rel="noopener noreferrer">GPL 전문</a></dd></div>
+                <div><dt>hunspell-wasm 0.3.0 / Hunspell</dt><dd>Rotem Dan 및 Hunspell 기여자. LGPL / GPL / MPL 삼중 라이선스.<br><a href="https://github.com/rotemdan/hunspell-wasm" target="_blank" rel="noopener noreferrer">원본 소스</a> · <a href="vendor/hunspell-wasm/COPYING.LESSER" target="_blank" rel="noopener noreferrer">LGPL</a> · <a href="vendor/hunspell-wasm/COPYING" target="_blank" rel="noopener noreferrer">GPL</a> · <a href="vendor/hunspell-wasm/COPYING.MPL" target="_blank" rel="noopener noreferrer">MPL</a></dd></div>
+                <div><dt>Pretendard 1.3.9</dt><dd>Kil Hyung-jin · SIL Open Font License 1.1.<br><a href="https://github.com/orioncactus/pretendard" target="_blank" rel="noopener noreferrer">프로젝트</a> · <a href="assets/licenses/pretendard.txt" target="_blank" rel="noopener noreferrer">저작권·라이선스 전문</a></dd></div>
+                <div><dt>Lucide</dt><dd>Lucide Icons and Contributors · ISC. Feather에서 유래한 일부 아이콘은 Cole Bemis의 MIT 조건도 적용됩니다.<br><a href="https://github.com/lucide-icons/lucide" target="_blank" rel="noopener noreferrer">프로젝트</a> · <a href="assets/licenses/lucide.txt" target="_blank" rel="noopener noreferrer">저작권·라이선스 전문</a></dd></div>
+                <div><dt>Tailwind CSS</dt><dd>Tailwind Labs, Inc. · MIT.<br><a href="https://github.com/tailwindlabs/tailwindcss" target="_blank" rel="noopener noreferrer">프로젝트</a> · <a href="assets/licenses/tailwindcss.txt" target="_blank" rel="noopener noreferrer">저작권·라이선스 전문</a></dd></div>
+                <div><dt>xlsx-js-style 1.2.0</dt><dd>xlsx-js-style 및 SheetJS 기여자 · Apache License 2.0.<br><a href="https://github.com/gitbrent/xlsx-js-style" target="_blank" rel="noopener noreferrer">프로젝트</a> · <a href="assets/licenses/xlsx-js-style.txt" target="_blank" rel="noopener noreferrer">라이선스 전문</a></dd></div>
+                <div><dt>PDF.js 3.11.174</dt><dd>Mozilla 및 PDF.js 기여자 · Apache License 2.0.<br><a href="https://github.com/mozilla/pdf.js/tree/v3.11.174" target="_blank" rel="noopener noreferrer">원본 소스</a> · <a href="assets/licenses/pdfjs.txt" target="_blank" rel="noopener noreferrer">라이선스 전문</a></dd></div>
+            </dl>
         </div>
     </dialog>
 
@@ -88,7 +147,7 @@
             <h1 class="relative -top-7 text-lg font-bold tracking-tight leading-normal text-center whitespace-nowrap"><span class="relative">생활기록부 도우미<span id="lite-badge" class="absolute -right-[4px] -top-[9px] text-[9.5px] font-semibold tracking-[0.08em] leading-none text-white">LITE</span></span></h1>
         </div>
 
-        <nav class="flex flex-col gap-[9px] mt-9" aria-label="생기부 기록 영역">
+        <nav class="flex flex-col gap-[9px] mt-[21px]" aria-label="생기부 기록 영역">
             <button class="sidebar-area-btn active-main area-btn" onclick="selArea('자율', this)">
                 <i data-lucide="house-heart" aria-hidden="true"></i><span>자율활동</span>
             </button>
@@ -113,8 +172,11 @@
                 <input id="admin-pw" type="password" placeholder="관리자 비밀번호" onkeydown="if(event.key==='Enter') adminLogin()">
                 <button type="button" onclick="adminLogin()">들어가기</button>
             </div>
-            <div class="relative top-[4px] inline-flex items-center gap-2">
-                <button type="button" onclick="document.getElementById('privacy-dialog').showModal()" class="text-xs font-bold text-slate-300 hover:text-white underline underline-offset-4 rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400">개인정보 처리방침</button>
+            <div class="sidebar-links">
+                <button type="button" class="sidebar-privacy" onclick="document.getElementById('privacy-dialog').showModal()">개인정보 처리방침</button>
+                <span aria-hidden="true">|</span>
+                <button type="button" class="sidebar-license-link" onclick="document.getElementById('license-dialog').showModal()">LICENSES</button>
+                <span aria-hidden="true">|</span>
                 <button type="button" class="admin-gear" aria-label="관리자" title="관리자" onclick="toggleAdminLogin()"><i data-lucide="settings" aria-hidden="true"></i></button>
             </div>
         </div>
@@ -191,20 +253,19 @@
     <!-- 3. 오른쪽 영역 (생성 결과) -->
     <section id="work-result" class="flex-1 min-[1100px]:min-w-[490px] px-3 pb-6 min-[1100px]:py-6 min-[1100px]:pr-[19px] min-[1100px]:pl-[5px] flex flex-col gap-6 min-h-0">
         
-        <div class="bg-white p-[17px] rounded-2xl shadow-sm border border-slate-200 flex flex-col flex-1 h-[75vh] min-h-[520px] min-[1100px]:h-auto min-[1100px]:min-h-0">
-            <div class="flex flex-wrap justify-between items-center gap-2 gap-y-3 min-[1100px]:h-[34px] shrink-0 -translate-y-2">
-                <div class="step-group self-end translate-y-[10px] order-last basis-full min-[1100px]:order-none min-[1100px]:basis-auto"><div class="step-label">문장 생성 결과</div></div>
-                <button onclick="runAI()" id="run-btn" class="min-[1100px]:translate-y-[9px] ml-auto relative overflow-hidden shrink-0 min-w-[128px] justify-center bg-[#334155] text-[#FFFFFF] px-4 h-[30px] inline-flex items-center rounded-xl text-sm font-bold leading-none shadow-sm hover:bg-[#253141] transition-all">
+        <div class="bg-white p-[17px] pt-[14px] rounded-2xl shadow-sm border border-slate-200 flex flex-col flex-1 h-[75vh] min-h-[520px] min-[1100px]:h-auto min-[1100px]:min-h-0">
+            <div class="flex flex-wrap items-center gap-2 shrink-0 mb-[8px]">
+                <button onclick="runAI()" id="run-btn" class="relative overflow-hidden shrink-0 min-w-[128px] justify-center bg-[#334155] text-[#FFFFFF] px-4 h-[34px] inline-flex items-center rounded-xl text-sm font-bold leading-none shadow-sm hover:bg-[#253141] transition-all">
                     <span id="loading-bar" class="run-progress absolute inset-y-0 left-0 bg-[#334155] transition-all duration-300 ease-out" style="width: 0%;"></span>
                     <span class="run-label relative">✨ 문장 생성하기</span>
                     <span id="loading-percent" class="run-progress relative font-mono">0%</span>
                 </button>
-                <button id="btn-export-result" onclick="exportExcel('result-table', '생기부_' + area + '_AI결과')" class="min-[1100px]:translate-y-[9px] bg-[#1D6F42] text-white px-4 h-[30px] inline-flex items-center gap-2 rounded-xl text-sm font-bold leading-none hover:bg-[#145232] transition-colors shadow-sm"><i data-lucide="file-spreadsheet" class="w-[18px] h-[18px]" stroke-width="1.8" aria-hidden="true"></i>결과 내려받기</button>
+                <button id="btn-export-result" onclick="exportExcel('result-table', '생기부_' + area + '_AI결과')" class="bg-[#1D6F42] text-white px-4 h-[34px] inline-flex items-center gap-2 rounded-xl text-sm font-bold leading-none hover:bg-[#145232] transition-colors shadow-sm"><i data-lucide="file-spreadsheet" class="w-[18px] h-[18px]" stroke-width="1.8" aria-hidden="true"></i>결과 내려받기</button>
             </div>
 
 
-            <div class="relative flex-1 flex flex-col min-h-0 mt-[2px] -mr-[8px] rounded-xl rounded-tl-none overflow-hidden">
-              <div class="pointer-events-none absolute inset-y-0 left-0 right-[8px] border border-[#334155] rounded-xl rounded-tl-none z-20"></div>
+            <div class="relative flex-1 flex flex-col min-h-0 mt-[2px] -mr-[8px] rounded-xl overflow-hidden">
+              <div class="pointer-events-none absolute inset-y-0 left-0 right-[8px] border border-[#334155] rounded-xl z-20"></div>
               <div class="shrink-0 custom-scrollbar" style="overflow-y: hidden; scrollbar-gutter: stable;">
                 <table class="excel-table result-head-table" style="width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0;">
                   <colgroup><col style="width: 44px;"><col><col style="width: 90px;"></colgroup>
@@ -237,7 +298,7 @@
     <!-- 4. 생활기록부 프롬프트 (AI 지침 보기·수정) -->
     <section id="guide-page" class="hidden-element flex-1 px-3 pb-6 min-[1100px]:py-6 min-[1100px]:pl-0 min-[1100px]:pr-[19px] flex flex-col min-h-0">
         <div class="bg-white p-[17px] rounded-2xl shadow-sm border border-slate-200 flex flex-col flex-1 min-h-0 gap-4">
-            <div class="flex flex-wrap items-center gap-2">
+            <div class="guide-toolbar flex flex-wrap items-center gap-2">
                 <div class="guide-switch" role="tablist" aria-label="지침 종류">
                     <button type="button" data-guide="behavior" onclick="showGuideKind('behavior')">행동특성 지침</button>
                     <button type="button" data-guide="general" onclick="showGuideKind('general')">자율·진로·동아리·과세특 지침</button>
@@ -246,79 +307,56 @@
                 </div>
                 <div id="guide-actions" class="ml-auto flex flex-wrap items-center gap-2"></div>
             </div>
-            <div id="guide-list" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col gap-3 pr-1"></div>
+            <div id="guide-list" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col gap-3 pr-[17px]"></div>
         </div>
     </section>
 
-    <!-- 5. 생활기록부 보조 점검: 가운데 = 파일·점검 기준, 오른쪽 = 점검 결과 (파일은 브라우저 안에서만 읽음) -->
-    <main id="check-main" class="autonomy-layout check-part hidden-element min-[1100px]:flex-[0_1_640px] min-[1100px]:min-w-[380px] px-3 pb-3 min-[1100px]:py-6 min-[1100px]:pl-0 min-[1100px]:pr-[7px] flex flex-col min-h-0">
-        <section class="w-full h-full bg-white p-[17px] rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-6 flex-1 min-h-0 overflow-hidden">
-            <div class="step-group shrink-0">
-                <div class="step-label">파일 업로드</div>
-                <div class="set-box flex flex-col gap-3">
-                    <div id="rc-drop" class="rc-drop" role="button" tabindex="0" aria-label="나이스 엑셀·PDF 파일 고르기">
-                        <i data-lucide="file-spreadsheet" aria-hidden="true"></i>
-                        <strong>엑셀 또는 PDF 파일을 드래그해서 놓으세요</strong>
-                    </div>
-                    <input type="file" id="rc-file-input" accept=".xlsx,.xls,.pdf" multiple hidden>
-                    <div id="rc-file-list" class="flex flex-col gap-2"></div>
-                    <p id="rc-file-msg" class="rc-msg" role="status"></p>
-                </div>
+    <!-- 5. 생활기록부 보조 점검: 파일 가져오기·점검 항목·결과 통합 -->
+    <section id="check-result" class="check-part hidden-element flex-1 min-[1100px]:min-w-[490px] px-3 pb-6 min-[1100px]:py-6 min-[1100px]:pr-[19px] min-[1100px]:pl-0 flex flex-col min-h-0">
+        <div class="bg-white p-[17px] pt-[14px] rounded-2xl shadow-sm border border-slate-200 flex flex-col flex-1 h-[75vh] min-h-[520px] min-[1100px]:h-auto min-[1100px]:min-h-0">
+            <div class="rc-result-toolbar flex flex-wrap items-center gap-2 shrink-0 mb-[8px]">
+                <button id="rc-run-btn" type="button" onclick="rcRun()" disabled class="shrink-0 bg-[#334155] text-white px-4 h-[34px] inline-flex items-center gap-2 rounded-xl text-sm font-bold leading-none shadow-sm hover:bg-[#253141] transition-all"><i data-lucide="search-check" class="w-[17px] h-[17px] text-[#FFC058]" aria-hidden="true"></i>점검하기</button>
+                <button id="rc-export-btn" type="button" onclick="rcExport()" disabled class="bg-[#1D6F42] text-white px-4 h-[34px] inline-flex items-center gap-2 rounded-xl text-sm font-bold leading-none hover:bg-[#145232] transition-colors shadow-sm"><i data-lucide="file-spreadsheet" class="w-[18px] h-[18px]" stroke-width="1.8" aria-hidden="true"></i>결과 내려받기</button>
+                <div id="rc-file-list" class="rc-files" aria-label="불러온 파일"></div>
+                <select id="rc-type-filter" class="nice-select rc-type-filter" aria-label="점검 항목 필터" onchange="rcTab=this.value;rcRenderResults()"><option value="all">전체</option></select>
+                <label class="rc-result-search">
+                    <i data-lucide="search" aria-hidden="true"></i>
+                    <input id="rc-search" type="search" oninput="rcSearch(this.value)" placeholder="검색" aria-label="점검 결과 검색" class="set-input !w-full !h-[34px]">
+                </label>
             </div>
-
-            <div class="step-group flex-1 flex flex-col min-h-0">
-                <div class="step-label">점검 기준</div>
-                <div class="set-box flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col gap-2">
-                    <details class="rc-acc" open>
-                        <summary>점검 항목 고르기</summary>
-                        <div class="rc-acc-body"><div id="rc-types" class="rc-types"></div></div>
-                    </details>
-                    <details class="rc-acc">
-                        <summary>반복 표현 · 비슷한 문장</summary>
-                        <div class="rc-acc-body">
-                            <label class="rc-field"><span>같은 낱말을 몇 번 넘게 쓰면 알려 줄까요?</span><span class="rc-input-unit"><input id="rc-repeat-min" type="number" min="2" max="10" class="set-input"><em>번 이상</em></span></label>
-                            <label class="rc-field"><span>다른 학생 기록과 얼마나 비슷하면 알려 줄까요?</span><span class="rc-input-unit"><input id="rc-similar-min" type="number" min="30" max="100" class="set-input"><em>% 이상</em></span></label>
-                        </div>
-                    </details>
-                    <details class="rc-acc">
-                        <summary>내가 더하는 기재할 수 없는 표현</summary>
-                        <div class="rc-acc-body">
-                            <p class="rc-help">한 줄에 하나씩 적어 주세요. 기록에서 이 말이 나오면 알려 드려요. 이 브라우저에만 저장돼요.</p>
-                            <textarea id="rc-custom-words" rows="5" class="set-input !h-auto py-2 leading-relaxed" placeholder="예: ○○학원&#10;○○캠프"></textarea>
-                        </div>
-                    </details>
-                    <div class="flex justify-end mt-1">
-                        <button type="button" onclick="rcResetSettings()" class="guide-btn">처음 기준으로</button>
+            <input type="file" id="rc-file-input" accept=".xlsx,.xls,.pdf" hidden>
+            <div id="rc-drop" class="rc-result-card relative flex-1 flex flex-col min-h-0 mt-[2px] -mr-[8px] rounded-xl overflow-hidden">
+                <div class="pointer-events-none absolute inset-y-0 left-0 right-[8px] border border-[#334155] rounded-xl z-20"></div>
+                <div id="rc-import" class="rc-import">
+                    <div class="rc-import-panel">
+                        <span class="rc-import-icons" aria-hidden="true"><span class="rc-import-excel"><i data-lucide="file-spreadsheet"></i><b>EXCEL</b></span><span class="rc-import-and">&amp;</span><span class="rc-import-pdf"><i data-lucide="file-text"></i><b>PDF</b></span></span>
+                        <h2>점검할 파일을 가져오세요</h2>
+                        <p>엑셀 또는 PDF 파일을 여기에 끌어다 놓으세요.</p>
+                        <button id="rc-import-button" type="button" class="rc-import-button"><i data-lucide="folder-open" aria-hidden="true"></i>파일 선택</button>
                     </div>
                 </div>
-            </div>
-        </section>
-    </main>
-
-    <section id="check-result" class="check-part hidden-element flex-1 min-[1100px]:min-w-[490px] px-3 pb-6 min-[1100px]:py-6 min-[1100px]:pr-[19px] min-[1100px]:pl-[5px] flex flex-col min-h-0">
-        <div class="bg-white p-[17px] rounded-2xl shadow-sm border border-slate-200 flex flex-col flex-1 gap-3 h-[75vh] min-h-[520px] min-[1100px]:h-auto min-[1100px]:min-h-0">
-            <div class="flex flex-wrap justify-between items-center gap-2 gap-y-3 min-[1100px]:h-[34px] shrink-0 -translate-y-2">
-                <div class="step-group self-end translate-y-[10px] order-last basis-full min-[1100px]:order-none min-[1100px]:basis-auto"><div class="step-label">점검 결과</div></div>
-                <button id="rc-run-btn" type="button" onclick="rcRun()" disabled class="min-[1100px]:translate-y-[9px] ml-auto shrink-0 bg-[#334155] text-white px-4 h-[30px] inline-flex items-center gap-2 rounded-xl text-sm font-bold leading-none shadow-sm hover:bg-[#253141] transition-all disabled:bg-slate-300 disabled:cursor-not-allowed"><i data-lucide="search-check" class="w-[17px] h-[17px]" aria-hidden="true"></i>점검하기</button>
-                <button id="rc-export-btn" type="button" onclick="rcExport()" disabled class="min-[1100px]:translate-y-[9px] bg-[#1D6F42] text-white px-4 h-[30px] inline-flex items-center gap-2 rounded-xl text-sm font-bold leading-none hover:bg-[#145232] transition-colors shadow-sm disabled:bg-slate-300 disabled:cursor-not-allowed"><i data-lucide="file-spreadsheet" class="w-[18px] h-[18px]" stroke-width="1.8" aria-hidden="true"></i>결과 내려받기</button>
-            </div>
-            <div class="flex flex-wrap items-center gap-2 shrink-0">
-                <div id="rc-tabs" class="guide-switch rc-tabs" role="tablist" aria-label="점검 항목"></div>
-                <input id="rc-search" type="search" oninput="rcSearch(this.value)" placeholder="학생 이름·과목으로 찾기" class="set-input ml-auto !w-[190px] !h-[34px]">
-            </div>
-            <div class="relative flex-1 min-h-0 overflow-auto custom-scrollbar rounded-xl border border-[#334155]">
-                <table class="excel-table rc-table" style="table-layout: fixed; min-width: 640px; height: 100%;">
-                    <colgroup><col style="width:44px"><col style="width:130px"><col><col style="width:220px"><col style="width:86px"></colgroup>
-                    <thead><tr><th class="excel-num">순</th><th>학생</th><th>기록 내용</th><th>고칠 점</th><th class="excel-byte">글자 수</th></tr></thead>
+                <div id="rc-loading" class="rc-loading" role="status" aria-live="polite" hidden>
+                    <div class="rc-loading-panel">
+                        <span class="rc-loader" aria-hidden="true"><span></span><i data-lucide="search-check"></i></span>
+                        <p id="rc-loading-text" class="rc-loading-text"></p>
+                        <p id="rc-loading-sub" class="rc-loading-sub"></p>
+                    </div>
+                </div>
+                <div class="flex-1 min-h-0 overflow-auto custom-scrollbar" style="scrollbar-gutter: stable;">
+                <table class="excel-table rc-table" style="table-layout: fixed; min-width: 760px; height: 100%;">
+                    <colgroup><col style="width:76px"><col style="width:72px"><col style="width:132px"><col><col><col style="width:76px"></colgroup>
+                    <thead><tr><th>이름</th><th>학번</th><th>항목</th><th>기록 내용</th><th>검토 결과</th><th class="excel-byte">글자 수</th></tr></thead>
                     <tbody id="rc-tbody"></tbody>
                 </table>
+                </div>
             </div>
         </div>
     </section>
 
-    <script src="js/guide-default.js?v=20261118"></script>
-    <script src="js/app.js?v=20261118"></script>
-    <script src="js/record-check.js?v=20261118"></script>
-    <script src="js/record-check-ui.js?v=20261118"></script>
+    <script src="js/guide-default.js?v=20261118t"></script>
+    <script src="js/app.js?v=20261118t"></script>
+    <script src="js/record-check.js?v=20261118t"></script>
+    <script src="js/record-spell.js?v=20261118t"></script>
+    <script src="js/record-check-ui.js?v=20261118t"></script>
 </body>
 </html>

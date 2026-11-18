@@ -48,11 +48,11 @@ assert.ok(types(0).includes('ending'), '마침표 빠짐');
 assert.ok(types(1).includes('spell'), '몇일 → 며칠');
 assert.equal(types(2).join(), 'empty');
 
-// '~다.' 끝맺음, 반복 표현, 글자 수 넘침
+// '~다.' 끝맺음, 글자 수 넘침 (반복 표현은 점검하지 않음)
 const one = rcCheckAll([{ area: '행동특성 및 종합의견', subject: '', name: '가', text: '성실한 태도로 성실하게 참여함. 성실함이 돋보였다.' }],
     { ...S, limits: { ...S.limits, '행동특성 및 종합의견': 30 } }, getByteLength)[0].issues;
 assert.ok(one.some(x => x.type === 'ending'));
-assert.ok(one.some(x => x.type === 'repeat'));
+assert.ok(!one.some(x => x.type === 'repeat'));
 assert.ok(one.some(x => x.type === 'length'));
 
 // 대학원은 학원으로 잡지 않음
@@ -65,6 +65,31 @@ const sim = rcCheckAll([
     { area: '자율·자치활동', subject: '', name: '나', text: '학급 회의에서 의견을 조리 있게 말하고 친구들의 생각을 존중함.' },
 ], S, getByteLength);
 assert.ok(sim[0].issues.some(x => x.type === 'similar'));
+
+// 기록 일부의 문장·문단이 같을 때만 안내하고 해당 원문을 표시함.
+const sentence = '친구들의 의견을 존중함.';
+const paragraph = '실험 과정을 정리함. 결과를 발표함.';
+const record = (name, text, extra = {}) => ({ area: '자율·자치활동', subject: '', name, text, ...extra });
+const duplicateIssues = (a, b, settings = S) => rcCheckAll([a, b], settings, getByteLength).map(r => r.issues.filter(i => i.type === 'similar'));
+let exact = duplicateIssues(record('가', `회의를 이끎. ${sentence}`), record('나', `${sentence} 탐구에 참여함.`));
+assert.equal(exact[0].length, 1);
+assert.equal(exact[1][0].what, sentence);
+assert.match(exact[0][0].why, /나.*100% 동일/);
+assert.match(rcHighlight(`회의를 이끎. ${sentence}`, exact[0]), /<mark/);
+exact = duplicateIssues(record('가', `서로 도움.\n${paragraph}`), record('나', `${paragraph}\n성실하게 참여함.`));
+assert.equal(exact[0].length, 1, '같은 문단 안의 문장을 따로 중복 안내하지 않음');
+assert.equal(exact[0][0].what, paragraph);
+for (const [a, b] of [
+    [record('가', sentence), record('나', '친구들의 생각을 존중함.')],
+    [record('가', sentence), record('나', '친구들의  의견을 존중함.')],
+    [record('가', sentence), record('나', '친구들의 의견을 존중함!')],
+    [record('가', sentence), record('나', sentence, { area: '진로활동' })],
+    [record('가', sentence, { subject: '국어' }), record('나', sentence, { subject: '수학' })],
+    [record('가', sentence), record('가', sentence)],
+    [record('가', ''), record('나', '')],
+]) assert.equal(duplicateIssues(a, b)[0].length, 0);
+assert.equal(duplicateIssues(record('가', sentence), record('나', sentence), { ...S, off: ['similar'] })[0].length, 0);
+assert.equal(duplicateIssues(record('가', sentence), record('나', sentence), { ...S, similarMin: 0.3 })[0].length, 1, '예전 설정에 영향을 받지 않음');
 
 // 표시할 때 HTML은 안전하게 바꿈
 assert.match(rcHighlight('<b>토익</b>', [{ what: '토익', level: 'no' }]), /&lt;b&gt;<mark class="rc-mark rc-no">토익<\/mark>/);
@@ -125,4 +150,65 @@ assert.ok(rcCheckAll([{ area: '진로활동', subject: '', name: '가', text: '�
 rcApplyGuide({ forbid: [{ level: 'no', label: '깨짐', find: '(', why: 'x' }], spell: [], limits: [] });
 assert.ok(!iss('진로활동', '(').some(x => x.why === 'x'), '잘못된 찾을 말은 건너뜀');
 rcApplyGuide(RC_DEFAULT_GUIDE);
+// 이전 저장 지침의 중복 기본 예시는 정리하되 새 규칙·수정한 교정안은 유지함.
+const retiredSpell = vm.runInContext('RC_RETIRED_SPELL', ctx);
+assert.equal(RC_DEFAULT_GUIDE.spell.length, 8);
+rcApplyGuide({ ...RC_DEFAULT_GUIDE, spell: [
+    ...RC_DEFAULT_GUIDE.spell, ...retiredSpell,
+    { wrong: '테스트오타', right: '테스트표현' },
+    { wrong: '금새', right: '사용자 교정안' },
+    { wrong: '역활', find: '역활', right: '추가 정규식' },
+] });
+assert.equal(vm.runInContext('RC_GUIDE.spell.length', ctx), 11);
+assert.ok(iss('진로활동', '테스트오타').some(x => /테스트표현/.test(x.why)));
+for (const text of ['몇 일 동안', '준비를 않 하였다.', '실행이 않 되었다.', '잘 할께.', '성공을 바램.', '구지 선택함.', '과제를 문안하게 마침.', '준비가 됬다.']) {
+    assert.ok(iss('진로활동', text).some(x => x.type === 'spell'), text);
+}
+rcApplyGuide(RC_DEFAULT_GUIDE);
 console.log('2026 guide rules passed');
+
+// 글자 수 변경값이 실제 점검에 적용되고, 자유학기 세부항목을 서로 덮지 않음.
+const editedLimits = JSON.parse(JSON.stringify(RC_DEFAULT_GUIDE));
+editedLimits.limits.find(row => row.key === '진로활동').max = '100';
+editedLimits.limits.find(row => row.item === '진로탐색활동 특기사항').max = '200';
+rcApplyGuide(editedLimits);
+assert.equal(S.limits['진로활동'], 300);
+assert.ok(iss('진로활동', '가'.repeat(101)).some(issue => issue.type === 'length'));
+assert.ok(!iss('진로활동', '가'.repeat(100)).some(issue => issue.type === 'length'));
+assert.equal(getByteLength('가'.repeat(99) + 'A 1'), 300);
+assert.ok(!iss('진로활동', '가'.repeat(99) + 'A 1').some(issue => issue.type === 'length'), '한글·영문·공백·숫자를 합쳐 바이트 한도와 비교함');
+assert.ok(iss('진로활동', '가'.repeat(99) + 'A 1\n').some(issue => issue.type === 'length'), '줄바꿈 1바이트를 더하면 한도 초과');
+const freeRecord = { name: '검증', area: '자유학기활동', subject: '진로탐색활동', text: '가'.repeat(201) };
+assert.ok(rcCheckAll([freeRecord], S, getByteLength)[0].issues.some(issue => issue.type === 'length'));
+assert.ok(!rcCheckAll([{ ...freeRecord, subject: '주제선택활동' }], S, getByteLength)[0].issues.some(issue => issue.type === 'length'));
+rcApplyGuide({ ...RC_DEFAULT_GUIDE, limits: [{ key: '진로활동', group: '예전 수정 이름', item: '예전 수정 항목', max: '1,000자' }] });
+assert.equal(S.limits['진로활동'], 3000);
+assert.equal(vm.runInContext("RC_GUIDE.limits.find(row => row.key === '진로활동').group", ctx), '창의적 체험활동상황');
+assert.ok(vm.runInContext('RC_GUIDE.limits.every(row => /^[0-9]+$/.test(row.max))', ctx));
+rcApplyGuide(RC_DEFAULT_GUIDE);
+console.log('Editable character limits and per-activity limits passed');
+
+// 지나친 표시 줄이기: '님' 붙은 말은 앞부분만 사전 확인, ★는 한 번만, 기재 요령에 잡힌 말은 맞춤법에서 다시 안 잡음
+assert.deepEqual([...ctx.rcSpellWords('교수님의 선생님께서 특강')], ['교수', '선생', '특강']);
+{
+    const rec = { name: '임채원', area: '진로활동', subject: '', text: '★ 소감 ★\n한국과학창의재단 프로그램에 참여함.' };
+    const issues = rcCheckAll([rec], { ...S, spellings: { 한국과학창의재단: [] } }, getByteLength)[0].issues;
+    assert.equal(issues.filter(i => i.what.includes('★')).length, 2, '★ 두 개는 각각 한 번씩만');
+    assert.equal(issues.filter(i => i.what === '한국과학창의재단').length, 1, '기관 이름은 기재 요령에서 한 번만');
+}
+console.log('False positive guards passed');
+{
+    // '경진대회'는 한 번만, 대학 이름 뒤 '교수님의 특강'은 강사 이름으로 잡지 않음, '○○생태원'은 기관 이름 확인
+    const rec = { name: '나도윤', area: '진로활동', subject: '', text: '교내 과학 경진대회를 준비함. 서울대학교 교수님의 특강을 들음. 국립생태원을 견학함.' };
+    const issues = rcCheckAll([rec], S, getByteLength)[0].issues.filter(i => i.type === 'forbid');
+    assert.equal(issues.map(i => i.what).join(','), '경진대회,서울대학교,국립생태원');
+}
+console.log('Forbid merge and boundary passed');
+{
+    // 문단 번호만 같은 두 학생은 똑같은 문장으로 잡지 않고, 진짜 같은 문장만 잡음
+    const a = { name: '가', num: '1', area: '진로활동', subject: '', text: '1. 직업 카드로 관심 분야를 찾음.\n2. 직업인 인터뷰를 정리함.' };
+    const b = { name: '나', num: '2', area: '진로활동', subject: '', text: '1. 흥미 검사 결과를 해석함.\n2. 직업인 인터뷰를 정리함.' };
+    const sim = rcCheckAll([a, b], S, getByteLength)[0].issues.filter(i => i.type === 'similar').map(i => i.what);
+    assert.equal(sim.join('|'), '2. 직업인 인터뷰를 정리함.');
+}
+console.log('Similar ignores bare numbering passed');

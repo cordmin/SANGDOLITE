@@ -415,11 +415,18 @@ async function runAI() {
     loadBar.style.width = '100%';
     loadPercent.innerText = '100%';
 
+    let spellings = {};
+    try {
+        spellings = await rcCheckSpelling(allResults.map(text => ({ text })));
+    } catch (error) {
+        showModal('맞춤법 점검 안내', '문장은 생성했지만 사전 점검을 완료하지 못했어요. 등록된 보완 규칙만 적용합니다.<br>' + escapeHtml(error.message), 'info');
+    }
+
     setTimeout(() => {
         btn.disabled = false;
 
         rawGeneratedText = accumulatedText.trim();
-        renderTable(allResults);
+        renderTable(allResults, spellings);
     }, 500);
 }
 
@@ -451,22 +458,22 @@ function getByteLength(text) {
 }
 
 // 생성된 문장을 보조 점검 규칙(record-check.js)으로 살펴, 기재할 수 없는 표현·표기·끝맺음 문제를 칠하고 아래에 알려 줌
-function genCheckHtml(text) {
+function genCheckHtml(text, spellings = {}) {
     if (typeof rcCheckOne !== 'function') return escapeHtml(text).replace(/\n/g, '<br>');
-    const issues = rcCheckOne({ area: AREA_NAMES[area], text }, { ...RC_DEFAULT_SETTINGS, limits: {}, customWords: [] }, getByteLength)
+    const issues = rcCheckOne({ area: AREA_NAMES[area], text }, { ...RC_DEFAULT_SETTINGS, limits: {}, spellings }, getByteLength)
         .filter(i => i.type === 'forbid' || i.type === 'spell' || i.type === 'ending');
     if (!issues.length) return rcHighlight(text, []);
     const whys = [...new Set(issues.map(i => i.why))].map(w => `<li>${escapeHtml(w)}</li>`).join('');
     return rcHighlight(text, issues) + `<ul class="gen-warn">${whys}</ul>`;
 }
 
-function renderTable(items) {
+function renderTable(items, spellings = {}) {
     const tbody = document.getElementById('result-tbody');
     tbody.innerHTML = '';
     items.forEach((item, index) => {
         const cleanText = item.trim().replace(/^(?:\d+[\.\)\-]*\s*)+/, '').trim();
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td class="excel-num">${index + 1}</td><td class="result-cell">${genCheckHtml(cleanText)}</td><td class="excel-byte">${getByteLength(cleanText)} Byte</td>`;
+        tr.innerHTML = `<td class="excel-num">${index + 1}</td><td class="result-cell">${genCheckHtml(cleanText, spellings)}</td><td class="excel-byte">${getByteLength(cleanText)} Byte</td>`;
         tbody.appendChild(tr);
     });
     tbody.insertAdjacentHTML('beforeend', FILLER_ROW); // 표 아래 빈 공간 채우기
@@ -719,7 +726,7 @@ function renderGuide() {
         const tags = other.includes(key) ? '<span class="guide-tag">공통</span>' : '';
         const card = document.createElement('div');
         card.className = 'guide-card' + (idx === 0 ? ' intro' : '');
-        card.innerHTML = `<div class="guide-head">${idx === 0 ? '' : `<span class="guide-num">${idx}</span>`}<span class="guide-title">${escapeHtml(part.title)}</span>${tags}</div>`;
+        card.innerHTML = `<div class="guide-head"><span class="guide-label">${idx === 0 ? '' : `<span class="guide-num">${idx}</span>`}<span class="guide-title">${escapeHtml(part.title)}</span></span>${tags}</div>`;
         if (guideEditing) {
             const ta = document.createElement('textarea');
             ta.className = 'guide-edit';
@@ -744,7 +751,7 @@ function renderGuideActions() {
     } else if (guideKind === 'check') {
         rcCheckGuideActions(box);
     } else if (guideEditing) {
-        box.innerHTML = '<button type="button" class="guide-btn" onclick="fillDefaultGuide()">새 기본 지침 불러오기</button>'
+        box.innerHTML = '<button type="button" class="guide-btn" onclick="fillDefaultGuide()">기본값 불러오기</button>'
             + '<button type="button" class="guide-btn" onclick="cancelGuideEdit()">취소</button>'
             + '<button type="button" class="guide-btn dark" onclick="saveGuide()">저장</button>';
     } else {

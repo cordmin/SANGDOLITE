@@ -59,11 +59,14 @@ assert.match(built, /\{생성 글자 수\}/);
 assert.match(ctx.buildPrompt({ area: '과세특', charLimit: 250, sentenceCount: 1, cases: 'x' }), /'과목별 세부능력 및 특기사항' 영역/);
 // 생활기록부 점검 지침: 처음엔 없음 → 비밀번호 있어야 저장, 빈 칸·잘못된 찾을 말 거부, 저장하면 읽힘
 assert.equal(ctx.doGet({ parameter: { action: 'checkGuide' } }).checkGuide, null);
-const cg = { forbid: [{ level: 'no', label: '대회', words: '대회, 경진', why: '쓸 수 없어요.', allowIn: ['과목별 세부능력 및 특기사항'] }], spell: [{ wrong: '몇일, 몇 일', right: '며칠' }], limits: [{ group: '9. 행동특성', item: '행동특성 및 종합의견', max: '300자', key: '행동특성 및 종합의견' }] };
+const cg = { forbid: [{ level: 'no', label: '대회', words: '대회, 경진', why: '쓸 수 없어요.', allowIn: ['과목별 세부능력 및 특기사항'] }], spell: [{ wrong: '몇일, 몇 일', right: '며칠' }], limits: [{ group: '9. 행동특성', item: '행동특성 및 종합의견', max: '300', key: '행동특성 및 종합의견' }] };
 assert.equal(post({ action: 'saveCheckGuide', password: 'x', checkGuide: cg }).success, false, '비밀번호');
 assert.equal(post({ action: 'saveCheckGuide', password: 'pw', checkGuide: { ...cg, spell: [{ wrong: '', right: 'a' }] } }).success, false, '빈 칸 거부');
 assert.equal(post({ action: 'saveCheckGuide', password: 'pw', checkGuide: { ...cg, forbid: [{ label: 'x', find: '(' }] } }).success, false, '잘못된 찾을 말 거부');
 assert.ok(post({ action: 'saveCheckGuide', password: 'pw', checkGuide: cg }).success);
+for (const max of ['300자', '1,000', '1.5', '-1', '0', '9007199254740992']) {
+    assert.equal(post({ action: 'saveCheckGuide', password: 'pw', checkGuide: { ...cg, limits: [{ ...cg.limits[0], max }] } }).success, false, max);
+}
 const cgBack = ctx.doGet({ parameter: { action: 'checkGuide' } }).checkGuide;
 assert.equal(cgBack.forbid[0].words, '대회, 경진');
 assert.equal(cgBack.limits[0].key, '행동특성 및 종합의견');

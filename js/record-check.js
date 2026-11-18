@@ -16,21 +16,17 @@ const RC_HAENG = '행동특성 및 종합의견';
 // 영역별 최대 글자 수(바이트) — 2026 기재요령(중학교) '영역별 입력 가능 최대 글자수' 표 (학년 단위)
 const RC_DEFAULT_SETTINGS = {
     limits: { [RC_SETUK]: 1500, [RC_PERSONAL]: 1500, [RC_JAYUL]: 1500, [RC_CLUB]: 1500, [RC_CAREER]: 1500, [RC_FREE]: 3000, [RC_HAENG]: 900, '기타': 1500 },
-    repeatMin: 3,      // 한 기록 안에서 같은 낱말이 이만큼 나오면 알려 줌
-    similarMin: 0.6,   // 같은 과목·영역 다른 학생 기록과 이만큼 비슷하면 알려 줌 (0~1)
-    customWords: [],   // 선생님이 더한 기재할 수 없는 표현 (한 줄에 하나)
     off: []            // 끈 점검 항목 (RC_TYPES 열쇠)
 };
 
 // 점검 종류 (화면 탭 순서)
 const RC_TYPES = {
-    forbid: '기재할 수 없는 표현',
-    length: '글자 수',
-    spell: '맞춤법·표기',
-    ending: '문장 끝맺음',
-    repeat: '반복 표현',
-    similar: '비슷한 문장',
-    empty: '빠진 기록'
+    forbid: '기재 요령',
+    length: '최대 글자수',
+    spell: '맞춤법',
+    ending: '종결 어미',
+    similar: '똑같은 문장',
+    empty: '미입력 항목'
 };
 
 // ───────── 점검 지침 (관리자 페이지 '생활기록부 점검 지침'에서 고치면 서버에 저장되고 모두에게 적용) ─────────
@@ -58,8 +54,8 @@ const RC_DEFAULT_FORBID = [
     { level: "no", label: "K-MOOC·KOCW", words: "K-MOOC, KMOOC, MOOC, KOCW, 무크", why: "K-MOOC·MOOC·KOCW 관련 내용은 쓸 수 없어요." },
     { level: "no", label: "방과후학교", words: "방과 후 학교, 방과 후 수업, 방과 후 교실, 방과 후 활동, 방과 후 프로그램", why: "방과후학교 활동은 쓸 수 없어요." },
     { level: "no", label: "소논문·연구보고서", words: "소논문, 연구 보고서, R&E", why: "소논문·연구보고서의 제목·주제·참여 인원 같은 실적은 쓸 수 없어요. 세특에는 작성 관련 사항도 쓸 수 없어요." },
-    { level: "check", label: "기관·단체·상호명", words: "", find: "[가-힣A-Za-z]{2,}(?:재단|협회|연구원|연구소|박물관|미술관|과학관|기념관|센터|주식회사)|㈜", findNote: "'○○재단', '○○협회', '○○연구소', '○○박물관', '○○과학관', '○○센터'처럼 끝나는 모든 기관 이름과 '㈜'를 찾아요.", why: "구체적인 기관·단체·상호 이름은 쓸 수 없어요. 교육부·교육청 같은 교육관련기관은 써도 돼요." },
-    { level: "check", label: "강사 이름", words: "", find: "[가-힣]{2,4}\\s*(?:강사|작가|박사|교수)(?:님)?(?:의|을|를|와|과|에게|이|가)?\\s*(?:강연|특강|강의|초청)", findNote: "'홍길동 강사의 특강', '김○○ 작가 초청 강연'처럼 이름(2~4글자) + 강사·작가·박사·교수 + 강연·특강·강의·초청을 찾아요.", why: "강의를 한 강사의 이름은 쓸 수 없어요." },
+    { level: "check", label: "기관·단체·상호명", words: "", find: "[가-힣A-Za-z]{2,}(?:재단|협회|연구원|연구소|박물관|미술관|과학관|기념관|센터|주식회사|생태원|수목원|식물원|천문대)|㈜", findNote: "'○○재단', '○○협회', '○○연구소', '○○박물관', '○○과학관', '○○센터', '○○생태원', '○○수목원'처럼 끝나는 모든 기관 이름과 '㈜'를 찾아요.", why: "구체적인 기관·단체·상호 이름은 쓸 수 없어요. 교육부·교육청 같은 교육관련기관은 써도 돼요." },
+    { level: "check", label: "강사 이름", words: "", find: "(?<![가-힣])[가-힣]{2,4}\\s*(?:강사|작가|박사|교수)(?:님)?(?:의|을|를|와|과|에게|이|가)?\\s*(?:강연|특강|강의|초청)", findNote: "'홍길동 강사의 특강', '김○○ 작가 초청 강연'처럼 이름(2~4글자) + 강사·작가·박사·교수 + 강연·특강·강의·초청을 찾아요.", why: "강의를 한 강사의 이름은 쓸 수 없어요." },
     { level: "no", label: "영재교육기관 이름", words: "", find: "[가-힣]{2,}(?:교육청|교육지원청|대학교|대학|중학교|초등학교|고등학교)\\s*(?:부설\\s*)?[가-힣]{0,4}영재\\s*(?:교육원|학급|학교)", findNote: "'천안교육지원청 영재교육원', '○○대학교 부설 과학영재교육원'처럼 기관 이름이 붙은 영재교육원·영재학급을 찾아요.", why: "영재교육 이수내용에도 기관 이름은 쓰지 않아요. '영재교육원', '영재학급'처럼만 쓰세요." },
     { level: "no", label: "영재교육(세특 제외)", words: "영재 교육원, 영재 학급, 영재 학교, 영재 교육", why: "영재교육 내용은 과목별 세특의 '영재교육 기록사항'에만 쓸 수 있어요.", allowIn: [RC_SETUK, RC_PERSONAL] },
     { level: "check", label: "성적·등급·석차", words: "모의고사, 모의평가, 내신 등급, 석차, 백분위", find: "[1-9]\\s*등급|전교\\s*\\d+\\s*등", findNote: "'1등급'~'9등급', '전교 3등'처럼 숫자가 들어간 등급·등수도 찾아요.", why: "시험 성적·등급·석차는 특기사항에 쓰지 않아요. (학생건강체력평가 1등급은 체육 세특에 쓸 수 있어요.)" },
@@ -67,27 +63,51 @@ const RC_DEFAULT_FORBID = [
 ];
 
 // 맞춤법 점검 내용 (자주 틀리는 말 → 바른 말)
+// 사전이 놓치는 띄어쓰기·문맥 표현과 짧은 어절만 보완 규칙으로 유지함.
 const RC_DEFAULT_SPELL = [
-    { wrong: "몇 일", right: "며칠" }, { wrong: "됬", right: "됐" }, { wrong: "금새", right: "금세" },
-    { wrong: "역활", right: "역할" }, { wrong: "희안", right: "희한" }, { wrong: "오랫만", right: "오랜만" },
-    { wrong: "일일히", right: "일일이" }, { wrong: "깨끗히", right: "깨끗이" }, { wrong: "곰곰히", right: "곰곰이" },
-    { wrong: "틈틈히", right: "틈틈이" }, { wrong: "꼼꼼이", right: "꼼꼼히" }, { wrong: "솔직이", right: "솔직히" },
-    { wrong: "일찌기", right: "일찍이" }, { wrong: "더우기", right: "더욱이" }, { wrong: "갯수", right: "개수" },
-    { wrong: "촛점", right: "초점" }, { wrong: "댓가", right: "대가" }, { wrong: "구지", right: "굳이" },
-    { wrong: "문안하", right: "무난하" }, { wrong: "어의없", right: "어이없" }, { wrong: "내노라", right: "내로라" },
-    { wrong: "설겆이", right: "설거지" }, { wrong: "할께", right: "할게" }, { wrong: "않 하", right: "안 하" },
-    { wrong: "않 되", right: "안 되" }, { wrong: "뵈요", right: "봬요" }, { wrong: "왠만", right: "웬만" },
-    { wrong: "웬지", right: "왠지" }, { wrong: "어떻해", right: "어떡해" }, { wrong: "할려고", right: "하려고" },
-    { wrong: "바램", right: "바람" }, { wrong: "넓따", right: "널따" }, { wrong: "짧다랗", right: "짤따랗" },
-    { wrong: "가르켜", right: "가르쳐" }
+    {
+        "wrong": "몇 일",
+        "right": "며칠"
+    },
+    {
+        "wrong": "됬",
+        "right": "됐"
+    },
+    {
+        "wrong": "구지",
+        "right": "굳이"
+    },
+    {
+        "wrong": "문안하",
+        "right": "무난하"
+    },
+    {
+        "wrong": "할께",
+        "right": "할게"
+    },
+    {
+        "wrong": "않 하",
+        "right": "안 하"
+    },
+    {
+        "wrong": "않 되",
+        "right": "안 되"
+    },
+    {
+        "wrong": "바램",
+        "right": "바람"
+    }
 ];
+
+// 예전 저장 지침에 남은 동일한 기본 예시만 정리함. 수정한 교정안과 새 규칙은 유지함.
+const RC_RETIRED_SPELL = [{"wrong":"금새","right":"금세"},{"wrong":"역활","right":"역할"},{"wrong":"희안","right":"희한"},{"wrong":"오랫만","right":"오랜만"},{"wrong":"일일히","right":"일일이"},{"wrong":"깨끗히","right":"깨끗이"},{"wrong":"곰곰히","right":"곰곰이"},{"wrong":"틈틈히","right":"틈틈이"},{"wrong":"꼼꼼이","right":"꼼꼼히"},{"wrong":"솔직이","right":"솔직히"},{"wrong":"일찌기","right":"일찍이"},{"wrong":"더우기","right":"더욱이"},{"wrong":"갯수","right":"개수"},{"wrong":"촛점","right":"초점"},{"wrong":"댓가","right":"대가"},{"wrong":"어의없","right":"어이없"},{"wrong":"내노라","right":"내로라"},{"wrong":"설겆이","right":"설거지"},{"wrong":"뵈요","right":"봬요"},{"wrong":"왠만","right":"웬만"},{"wrong":"웬지","right":"왠지"},{"wrong":"어떻해","right":"어떡해"},{"wrong":"할려고","right":"하려고"},{"wrong":"넓따","right":"널따"},{"wrong":"짧다랗","right":"짤따랗"},{"wrong":"가르켜","right":"가르쳐"}];
 
 // 늘 살펴보는 표기 규칙 (관리자 지침과 상관없이 고정)
 const RC_SPELL_FIXED = [
     [/([을할볼될갈올알줄낼칠쓸])수\s?있/g, '$1 수 있'],
     [/ {2,}/g, '띄어쓰기 한 번'], [/ +([.,])/g, '$1'],
     // 기재요령: 서술형 항목에 특수문자·문단 구분 기호(번호)는 쓰지 않음
-    [/^[ \t]*(?:\d{1,2}[.)](?!\d)|[①-⑳]|[-•▪■□◆◇※★☆▶▷](?=\s))[ \t]*/gm, '번호·기호'],
+    [/^[ \t]*(?:\d{1,2}[.)](?!\d)|[①-⑳]|[-•▪](?=\s))[ \t]*/gm, '번호·기호'], // ★ 같은 특수문자는 아래 규칙에서 한 번만 잡음
     [/[★☆♥♡◆◇■□▶▷◀◁※♣♠◎]/g, '특수문자']
 ];
 // 바로 고쳐 줄 수 없는 것(설명만 보여 줌)
@@ -99,16 +119,16 @@ const RC_SPELL_NOTE = {
 
 // 영역별 입력 가능 최대 글자수 (2026 기재요령 중학교 162쪽 중 보조 점검이 실제로 살펴보는 영역만). key 영역의 글자 수로 점검함
 const RC_DEFAULT_LIMITS = [
-    { group: '창의적 체험활동상황*', item: '자율·자치활동 특기사항 (3학년은 자율활동)', max: '500자', key: RC_JAYUL },
-    { group: '창의적 체험활동상황*', item: '동아리활동 특기사항', max: '500자', key: RC_CLUB },
-    { group: '창의적 체험활동상황*', item: '진로활동 특기사항', max: '500자', key: RC_CAREER },
-    { group: '자유학기활동상황', item: '진로탐색활동 특기사항', max: '1,000자', key: RC_FREE },
-    { group: '자유학기활동상황', item: '주제선택활동 특기사항', max: '1,000자', key: RC_FREE },
-    { group: '자유학기활동상황', item: '예술·체육활동 특기사항', max: '1,000자', key: RC_FREE },
-    { group: '자유학기활동상황', item: '동아리활동 특기사항', max: '1,000자', key: RC_FREE },
-    { group: '교과학습발달상황', item: '과목별 세부능력 및 특기사항', max: '과목별 500자', key: RC_SETUK },
-    { group: '교과학습발달상황', item: '개인별 세부능력 및 특기사항', max: '500자', key: RC_PERSONAL },
-    { group: '행동특성 및 종합의견*', item: '행동특성 및 종합의견', max: '300자', key: RC_HAENG }
+    { group: '창의적 체험활동상황', item: '자율·자치활동 특기사항', max: '500', key: RC_JAYUL },
+    { group: '창의적 체험활동상황', item: '동아리활동 특기사항', max: '500', key: RC_CLUB },
+    { group: '창의적 체험활동상황', item: '진로활동 특기사항', max: '500', key: RC_CAREER },
+    { group: '자유학기활동상황', item: '진로탐색활동 특기사항', max: '1000', key: RC_FREE },
+    { group: '자유학기활동상황', item: '주제선택활동 특기사항', max: '1000', key: RC_FREE },
+    { group: '자유학기활동상황', item: '예술·체육활동 특기사항', max: '1000', key: RC_FREE },
+    { group: '자유학기활동상황', item: '동아리활동 특기사항', max: '1000', key: RC_FREE },
+    { group: '교과학습발달상황', item: '과목별 세부능력 및 특기사항', max: '500', key: RC_SETUK },
+    { group: '교과학습발달상황', item: '개인별 세부능력 및 특기사항', max: '500', key: RC_PERSONAL },
+    { group: '행동특성 및 종합의견', item: '행동특성 및 종합의견', max: '300', key: RC_HAENG }
 ];
 
 const RC_DEFAULT_GUIDE = { forbid: RC_DEFAULT_FORBID, spell: RC_DEFAULT_SPELL, limits: RC_DEFAULT_LIMITS };
@@ -124,32 +144,40 @@ function rcPattern(words, find) {
 }
 
 // 지침(자료)을 점검에 쓰는 모양으로 바꿈. 잘못된 찾을 말은 건너뜀
+function rcLimitNumber(value) {
+    const text = String(value ?? '').trim();
+    // 예전 저장값(500자, 1,000자, 과목별 500자)을 숫자로 이관함.
+    const match = text.match(/^(?:과목별\s*)?([0-9]+(?:,[0-9]{3})*)\s*자?$/);
+    const n = match ? Number(match[1].replace(/,/g, '')) : NaN;
+    return Number.isSafeInteger(n) && n > 0 ? String(n) : '';
+}
+
 function rcApplyGuide(guide) {
-    const g = guide && Array.isArray(guide.forbid) ? guide : RC_DEFAULT_GUIDE;
+    const original = guide && Array.isArray(guide.forbid) ? guide : RC_DEFAULT_GUIDE;
+    const savedLimits = original.limits || [];
+    const fixedLimits = RC_DEFAULT_LIMITS.map(base => {
+        const sameArea = savedLimits.filter(row => row.key === base.key);
+        const saved = sameArea.find(row => row.item === base.item) || (sameArea.length === 1 ? sameArea[0] : null);
+        return { ...base, max: rcLimitNumber(saved?.max) || base.max };
+    });
+    const g = { ...original, limits: fixedLimits, spell: (original.spell || []).filter(row => row.find || !RC_RETIRED_SPELL.some(old => old.wrong === row.wrong && old.right === row.right)) };
     const re = (s, flags) => { try { return s ? new RegExp(s, flags) : null; } catch (e) { return null; } };
     RC_GUIDE = g;
     RC_FORBID_RULES = g.forbid.map(r => ({ ...r, re: re(rcPattern(r.words, r.find), 'gi'), skip: r.skip ? re('^(?:' + r.skip + ')$', 'i') : null })).filter(r => r.re);
     RC_SPELL_RULES = (g.spell || []).map(r => [re(rcPattern(r.wrong, r.find), 'g'), r.right]).filter(([r]) => r).concat(RC_SPELL_FIXED);
-    // 글자 수: key가 있는 줄의 숫자(한글 기준) × 3바이트. 같은 key가 여러 줄이면 큰 값
+    // 한글 글자 수 × 3바이트. 자유학기는 세부 활동별 기준도 각각 적용함.
     const limits = { ...RC_BASE_LIMITS }, got = {};
     for (const row of g.limits || []) {
         const n = parseInt(String(row.max || '').replace(/[^0-9]/g, ''), 10);
-        if (row.key && n) got[row.key] = limits[row.key] = Math.max(got[row.key] || 0, n * 3);
+        if (row.key && n) {
+            got[row.key] = limits[row.key] = Math.max(got[row.key] || 0, n * 3);
+            if (row.key === RC_FREE) limits[row.key + '|' + row.item.replace(/\s*특기사항.*$/, '')] = n * 3;
+        }
     }
     RC_DEFAULT_SETTINGS.limits = limits;
 }
 const RC_BASE_LIMITS = { ...RC_DEFAULT_SETTINGS.limits };
 rcApplyGuide(RC_DEFAULT_GUIDE);
-
-// 낱말 끝 조사·어미를 떼어 같은 낱말끼리 세기 위함
-const RC_JOSA = /(?:으로서|으로써|에서는|에게서|으로|에서|에게|까지|부터|처럼|보다|은|는|이|가|을|를|에|의|와|과|도|만|로)$/;
-const RC_EOMI = /(?:적으로|적인|하였으며|하였고|하며|하고|하여|하는|하게|했으며|했고|했음|하였음|한|함|히|임|음|됨|적)$/;
-const rcStem = w => {
-    if (w.length > 2) w = w.replace(RC_JOSA, '');
-    if (w.length > 2) w = w.replace(RC_EOMI, '');
-    return w;
-};
-const RC_STOP = new Set(['및', '등', '수', '것', '위해', '통해', '대한', '대해', '있는', '있음', '있게', '활동', '학생', '자신의', '자신', '이를', '또한', '매우', '다양한', '모습', '모습을']);
 
 function rcEscape(s) {
     return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -302,6 +330,13 @@ function rcParsePdfLines(pages, fileName = '') {
 }
 
 // ───────── 점검 ─────────
+function rcSpellWords(text) {
+    // 사전이 '교수님의'처럼 '님'이 붙은 말을 몰라서 '님' 앞부분만 확인함
+    return [...new Set((text.normalize('NFC').match(/[\p{L}\p{N}]+/gu) || [])
+        .map(word => word.replace(/(?<=^[가-힣]{2,})님[가-힣]{0,3}$/, ''))
+        .filter(word => /^[가-힣]{2,}$/.test(word)))];
+}
+
 function rcCheckOne(rec, settings, byteLen) {
     const issues = [];
     const text = rec.text.replace(/\r\n?/g, '\n');
@@ -313,15 +348,18 @@ function rcCheckOne(rec, settings, byteLen) {
     }
 
     const bytes = byteLen(text);
-    const limit = settings.limits[rec.area] || settings.limits['기타'];
+    const limit = settings.limits[rec.area + '|' + rec.subject] || settings.limits[rec.area] || settings.limits['기타'];
     if (bytes > limit) add('length', 'no', '', `글자 수가 ${bytes - limit}바이트 넘쳐요. (지금 ${bytes} / 최대 ${limit}바이트)`);
 
-    const words = RC_FORBID_RULES.concat(
-        (settings.customWords || []).filter(Boolean).map(w => ({ re: new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), level: 'no', why: '선생님이 더한 기재할 수 없는 표현이에요.' }))
-    );
-    for (const rule of words) {
+    for (const rule of RC_FORBID_RULES) {
         if (rule.allowIn && rule.allowIn.includes(rec.area)) continue;
-        for (const m of text.matchAll(rule.re)) if (!rule.skip || !rule.skip.test(m[0])) add('forbid', rule.level, m[0], rule.why);
+        let prev = null; // '경진대회'처럼 같은 규칙 낱말이 바로 붙어 나오면 하나로 합침
+        for (const m of text.matchAll(rule.re)) {
+            if (rule.skip && rule.skip.test(m[0])) continue;
+            if (prev && prev.end === m.index) { prev.issue.what += m[0]; prev.end += m[0].length; continue; }
+            add('forbid', rule.level, m[0], rule.why);
+            prev = { issue: issues[issues.length - 1], end: m.index + m[0].length };
+        }
     }
 
     for (const [re, right] of RC_SPELL_RULES) {
@@ -329,6 +367,13 @@ function rcCheckOne(rec, settings, byteLen) {
             const fix = m[0].replace(re, right);
             add('spell', 'check', m[0], RC_SPELL_NOTE[right] || `'${m[0].trim()}' → '${fix.trim()}'`, RC_SPELL_NOTE[right] ? null : fix);
         }
+    }
+
+    if (!(settings.off || []).includes('spell')) for (const word of rcSpellWords(text)) {
+        const suggestions = settings.spellings?.[word];
+        if (!suggestions || issues.some(issue => (issue.type === 'spell' || issue.type === 'forbid') && (word.includes(issue.what) || issue.what.includes(word)))) continue; // 이미 잡힌 말은 한 번만
+        const hint = suggestions.length ? ` 교정 후보: ${suggestions.map(s => `'${s}'`).join(', ')}.` : '';
+        add('spell', 'check', word, `'${word}'은(는) 한국어 사전에서 확인되지 않아요.${hint} 전문어·이름이면 원문을 확인해 주세요.`);
     }
 
     // 문장 끝맺음: 특기사항은 '~함.', '~임.'처럼 명사형으로 끝내고 마침표를 찍음
@@ -340,53 +385,39 @@ function rcCheckOne(rec, settings, byteLen) {
         else if (i === sentences.length - 1 && !/\.$/.test(s)) add('ending', 'check', tail, '마지막 문장에 마침표가 빠졌어요.');
     });
 
-    // 반복 표현: 같은 낱말이 여러 번 나오면 알려 줌
-    const counts = new Map();
-    for (const raw of text.split(/[\s.,·"'“”‘’()\[\]]+/)) {
-        const w = rcStem(raw);
-        if (w.length < 2 || RC_STOP.has(w) || RC_STOP.has(raw)) continue;
-        counts.set(w, (counts.get(w) || 0) + 1);
-    }
-    for (const [w, n] of counts) {
-        if (n >= settings.repeatMin) add('repeat', 'check', w, `'${w}'을(를) ${n}번 썼어요. 다른 말로 바꿔 보세요.`);
-    }
     return issues;
 }
 
-// 두 글이 얼마나 비슷한지 (두 글자씩 묶어 겹치는 비율, 0~1)
-function rcSimilarity(a, b) {
-    const grams = s => {
-        const t = s.replace(/[\s.,·]/g, '');
-        const m = new Map();
-        for (let i = 0; i < t.length - 1; i++) { const g = t.slice(i, i + 2); m.set(g, (m.get(g) || 0) + 1); }
-        return [m, Math.max(t.length - 1, 0)];
-    };
-    const [ma, na] = grams(a), [mb, nb] = grams(b);
-    if (!na || !nb) return 0;
-    let both = 0;
-    for (const [g, c] of ma) both += Math.min(c, mb.get(g) || 0);
-    return (2 * both) / (na + nb);
+// 문단과 문장을 원문 그대로 비교함. 양끝 공백과 줄바꿈 형식만 정리함.
+function rcExactPassages(text) {
+    const paragraphs = text.replace(/\r\n?/g, '\n').split(/\n+/).map(s => s.trim()).filter(Boolean);
+    const sentences = paragraphs.flatMap(p => p.split(/(?<=[.!?])(?=\s|[가-힣])/).map(s => s.trim()).filter(Boolean));
+    // '1.', '★'처럼 글자가 거의 없는 조각은 비교하지 않음 (번호만 같아도 똑같은 문장으로 잡히던 문제)
+    return new Set([...paragraphs, ...sentences].filter(p => (p.match(/[가-힣A-Za-z]/g) || []).length >= 5));
 }
 
 function rcCheckAll(records, settings, byteLen) {
     const off = new Set(settings.off || []);
     const results = records.map(rec => ({ rec, issues: rcCheckOne(rec, settings, byteLen).filter(i => !off.has(i.type)) }));
     if (off.has('similar')) return results;
-    // 같은 영역·과목끼리만 비교. ponytail: 모든 쌍 비교라 한 묶음이 수천 개면 느려짐, 그때 문장 단위 색인으로 바꿀 것
+    // 같은 영역·과목의 다른 학생끼리 비교. ponytail: 수천 명이면 문장 색인으로 바꿀 것
     const groups = new Map();
     results.forEach(r => {
         if (!r.rec.text.trim()) return;
         const k = r.rec.area + '|' + r.rec.subject;
         if (!groups.has(k)) groups.set(k, []);
-        groups.get(k).push(r);
+        groups.get(k).push({ ...r, passages: rcExactPassages(r.rec.text) });
     });
     for (const list of groups.values()) {
         for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
-            const s = rcSimilarity(list[i].rec.text, list[j].rec.text);
-            if (s < settings.similarMin) continue;
-            const pct = Math.round(s * 100);
-            list[i].issues.push({ type: 'similar', level: 'check', what: '', why: `${rcWho(list[j].rec)} 기록과 ${pct}% 비슷해요.` });
-            list[j].issues.push({ type: 'similar', level: 'check', what: '', why: `${rcWho(list[i].rec)} 기록과 ${pct}% 비슷해요.` });
+            const a = list[i], b = list[j];
+            if (['grade', 'cls', 'num', 'name'].every(key => (a.rec[key] || '') === (b.rec[key] || ''))) continue;
+            const shared = [...a.passages].filter(p => b.passages.has(p)).sort((x, y) => y.length - x.length);
+            const matches = shared.filter((p, index) => !shared.slice(0, index).some(longer => longer.includes(p)));
+            for (const passage of matches) {
+                a.issues.push({ type: 'similar', level: 'check', what: passage, why: `${rcWho(b.rec)} 기록에 100% 동일한 문장 또는 문단이 있어요.` });
+                b.issues.push({ type: 'similar', level: 'check', what: passage, why: `${rcWho(a.rec)} 기록에 100% 동일한 문장 또는 문단이 있어요.` });
+            }
         }
     }
     return results;
@@ -408,4 +439,4 @@ function rcHighlight(text, issues) {
     return html.replace(re, m => `<mark class="rc-mark rc-${levelOf(raw.get(m))}">${m}</mark>`).replace(/\n/g, '<br>');
 }
 
-if (typeof module !== 'undefined') module.exports = { RC_DEFAULT_SETTINGS, RC_DEFAULT_GUIDE, rcApplyGuide, rcPattern, RC_TYPES, rcParseRows, rcParsePdfLines, rcCheckOne, rcCheckAll, rcSimilarity, rcHighlight, rcGuessArea };
+if (typeof module !== 'undefined') module.exports = { RC_DEFAULT_SETTINGS, RC_DEFAULT_GUIDE, rcApplyGuide, rcPattern, RC_TYPES, rcParseRows, rcParsePdfLines, rcCheckOne, rcCheckAll, rcHighlight, rcGuessArea };
