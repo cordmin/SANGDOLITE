@@ -306,13 +306,7 @@ td.excel-byte { background-color: #f1f5f9; padding: 12px 8px !important; }
 .rc-rule-group > b::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; box-shadow: 0 0 0 2px #fef3c7, 0 0 6px #f59e0b; }
 .rc-rule-group.rc-no > b::before { background: #dc2626; box-shadow: 0 0 0 2px #fee2e2, 0 0 6px #dc2626; }
 /* 생성 결과 보조 점검 표시 */
-.char-choice { position: relative; display: flex; align-items: center; justify-content: space-between; width: 190px; min-height: 58px; padding: 8px 13px; border: 1px solid #94a3b8; border-radius: 8px; background: #fff; color: #1e293b; }
-.char-choice:focus-within { outline: 2px solid #334155; outline-offset: 2px; }
-#char-option-label { display: flex; flex-direction: column; gap: 2px; line-height: 1.35; }
-#char-option-label strong { font-size: 15px; font-weight: 800; }
-#char-option-label span { font-size: 13px; font-weight: 600; color: #475569; }
-.char-choice-arrow { color: #475569; font-size: 22px; }
-.char-choice select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.result-byte-count { font-size: 12px; color: #475569; font-weight: 500; }
 .rc-guide-body { padding: 12px 14px; }
 /* 관리자 '생활기록부 점검 지침': 영역별 최대 글자수 표 (기재요령 162쪽 표 모양) */
 .rc-limit-table { width: 100%; border-collapse: collapse; font-size: 13px; color: #334155; }

@@ -63,6 +63,8 @@ const use = responses => {
     vm.runInContext(source.match(/function renderTable\(items\) \{[^]*?\n\}/)[0], ctx);
     ctx.renderTable(['장애인식개선교육 <원문>.']);
     assert.match(row.innerHTML, /&lt;원문&gt;/);
+    assert.match(row.innerHTML, new RegExp(Array.from('장애인식개선교육 <원문>.').length + '자<br>'));
+    assert.match(row.innerHTML, new RegExp('\\(' + ctx.getByteLength('장애인식개선교육 <원문>.') + 'byte\\)'));
     assert.ok(!row.innerHTML.includes('<mark') && !row.innerHTML.includes('gen-warn'));
     console.log('Single-request byte guidance, activity preservation, no retries or truncation, plain results passed');
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -247,18 +247,12 @@ function renderCharOptions() {
     const opts = CHAR_OPTIONS[area] || [250, 500];
     if (!opts.includes(charLimit)) charLimit = opts[0];
     const sel = document.getElementById('char-select');
-    sel.innerHTML = opts.map(n => `<option value="${n}">${n}자 (${n * 3}byte)</option>`).join('');
+    sel.innerHTML = opts.map(n => `<option value="${n}">${n}자 (약 ${n * 3}byte)</option>`).join('');
     sel.value = charLimit;
-    updateCharLabel();
 }
 
 function selChar(v) {
     charLimit = v;
-    updateCharLabel();
-}
-
-function updateCharLabel() {
-    document.getElementById('char-option-label').innerHTML = `<strong>${charLimit}자</strong><span>(${charLimit * 3}byte)</span>`;
 }
 
 function generationLines(text, activities = []) {
@@ -493,7 +487,7 @@ function renderTable(items) {
     items.forEach((item, index) => {
         const cleanText = item.trim().replace(/^(?:\d+[\.\)\-]*\s*)+/, '').trim();
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td class="excel-num">${index + 1}</td><td class="result-cell">${escapeHtml(cleanText).replace(/\n/g, '<br>')}</td><td class="excel-byte">${getByteLength(cleanText)} Byte</td>`;
+        tr.innerHTML = `<td class="excel-num">${index + 1}</td><td class="result-cell">${escapeHtml(cleanText).replace(/\n/g, '<br>')}</td><td class="excel-byte">${Array.from(cleanText).length}자<br><span class="result-byte-count">(${getByteLength(cleanText)}byte)</span></td>`;
         tbody.appendChild(tr);
     });
     tbody.insertAdjacentHTML('beforeend', FILLER_ROW); // 표 아래 빈 공간 채우기
