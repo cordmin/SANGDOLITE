@@ -145,6 +145,22 @@ function showModal(title, msg, type = 'info') {
 }
 function closeModal() { document.getElementById('custom-modal').classList.add('hidden-element'); }
 
+function showConfirm(title, message, confirmText = '나가기', preview = '') {
+    const dialog = document.getElementById('confirm-dialog');
+    if (dialog.open) return Promise.resolve(false);
+    document.getElementById('confirm-title').textContent = title;
+    document.getElementById('confirm-desc').textContent = message;
+    document.getElementById('confirm-submit').textContent = confirmText;
+    const detail = document.getElementById('confirm-preview');
+    detail.innerHTML = preview;
+    detail.hidden = !preview;
+    dialog.returnValue = '';
+    return new Promise(resolve => {
+        dialog.addEventListener('close', () => resolve(dialog.returnValue === 'confirm'), { once: true });
+        dialog.showModal();
+    });
+}
+
 function translateError(errStr) {
     if (errStr.includes('지침이 아직 없어요')) return '관리자가 아직 지침을 저장하지 않았어요.<br>관리자에게 문의해 주세요.';
     const err = errStr.toLowerCase();
@@ -593,10 +609,10 @@ async function loadGuide() {
     }
 }
 
-function showGuideKind(kind) {
-    if (guideKind === 'check' && kind !== 'check' && rcGuideEditing && !confirm('고친 점검 지침을 저장하지 않고 나갈까요?')) return;
+async function showGuideKind(kind) {
+    if (guideKind === 'check' && kind !== 'check' && rcGuideEditing && !await showConfirm('수정한 내용을 버릴까요?', '저장하지 않은 점검 지침은 사라집니다.')) return;
     rcGuideEditing = false;
-    if ((kind === 'settings' || kind === 'check') && guideEditing && (guideResetPending || Object.keys(changedGuideParts()).length) && !confirm('고친 지침을 저장하지 않고 나갈까요?')) return;
+    if ((kind === 'settings' || kind === 'check') && guideEditing && (guideResetPending || Object.keys(changedGuideParts()).length) && !await showConfirm('수정한 내용을 버릴까요?', '저장하지 않은 문장 생성 지침은 사라집니다.')) return;
     if (kind === 'settings' || kind === 'check') { guideEditing = false; guideDrafts = {}; guideResetPending = false; }
     guideKind = kind;
     renderGuide();
@@ -770,7 +786,8 @@ function renderGuideActions() {
     }
     if (guideData && guideKind !== 'settings' && guideKind !== 'check') {
         const current = guideFromDefault ? '미저장' : `v${guideVersion(guideData)}`;
-        box.innerHTML = `<span class="guide-version">현재 버전 [${current}] / 기본 버전 [v${GUIDE_DEFAULT_VERSION}]</span>` + box.innerHTML;
+        box.innerHTML = `<div class="guide-versions" aria-label="지침 버전"><span class="version-badge current"><span>현재 버전</span><strong>${current}</strong></span><span class="version-badge baseline"><span>기본 버전</span><strong>v${GUIDE_DEFAULT_VERSION}</strong></span></div>`
+            + (guideResetPending ? '<span class="version-pending" role="status">기본 버전 · 저장 대기</span>' : '') + box.innerHTML;
     }
 }
 
@@ -800,12 +817,13 @@ async function adminLogin() {
 }
 
 // 수정 중에 guide-default.js의 지침(2026 기재요령 반영)으로 칸을 채움. 저장을 눌러야 서버에 들어감
-function fillDefaultGuide() {
-    if (!confirm(`문장 생성 지침을 기본 버전 ${GUIDE_DEFAULT_VERSION}으로 돌리시겠습니까?\n저장하면 기존 수정 내용이 사라집니다.`)) return;
+async function fillDefaultGuide() {
+    const current = guideFromDefault ? '미저장' : `v${guideVersion(guideData)}`;
+    const preview = `<div><span>현재 버전</span><strong>${current}</strong></div><span class="confirm-arrow" aria-hidden="true">→</span><div><span>기본 버전</span><strong>v${GUIDE_DEFAULT_VERSION}</strong></div>`;
+    if (!await showConfirm('기본 지침으로 되돌릴까요?', `문장 생성 지침을 기본 버전 ${GUIDE_DEFAULT_VERSION}으로 돌리시겠습니까?\n불러온 뒤 [저장]을 누르면 기존 수정 내용이 바뀝니다.`, '기본 지침 불러오기', preview)) return;
     guideResetPending = true;
     guideDrafts = {};
     renderGuide();
-    showModal('', `기본 버전 ${GUIDE_DEFAULT_VERSION}을 불러왔어요.<br>[저장]을 누르면 적용돼요.`, 'info');
 }
 
 function changedGuideParts() {
@@ -816,8 +834,8 @@ function changedGuideParts() {
     return changed;
 }
 
-function cancelGuideEdit() {
-    if ((guideResetPending || Object.keys(changedGuideParts()).length) && !confirm('고친 내용을 저장하지 않고 나갈까요?')) return;
+async function cancelGuideEdit() {
+    if ((guideResetPending || Object.keys(changedGuideParts()).length) && !await showConfirm('수정한 내용을 버릴까요?', '저장하지 않은 문장 생성 지침은 사라집니다.', '수정 취소')) return;
     guideEditing = false; guideDrafts = {}; guideResetPending = false;
     renderGuide();
 }
