@@ -719,7 +719,7 @@ function renderGuide() {
     list.innerHTML = guideFromDefault
         ? '<div class="guide-notice">서버에 아직 지침이 없어서 처음 지침을 보여 드려요. [수정] → [저장]을 누르면 서버에 저장되고 문장 생성에 쓰여요.</div>'
         : Object.entries(GUIDE_DEFAULT.parts).some(([key, part]) => part.body.replace(/\s+/g, ' ').trim() !== (guideData.parts[key]?.body || '').replace(/\s+/g, ' ').trim())
-            ? '<div class="guide-notice">서버에 저장된 지침이 현재 기본 지침과 달라요. 문장 생성에는 서버 지침이 적용됩니다. 최신 기본 지침으로 바꾸려면 [수정] → [기본값 불러오기] → [저장]을 눌러 주세요. 직접 수정한 지침도 기본값으로 바뀌므로 저장 전에 확인해 주세요.</div>'
+            ? '<div class="guide-notice">현재 저장된 지침으로 문장을 생성해요. 기본 지침으로 바꾸려면 [수정] → [기본값 불러오기] → [저장]. 기존 수정 내용은 사라져요.</div>'
             : '';
     order.forEach((key, idx) => {
         const part = guideData.parts[key];
