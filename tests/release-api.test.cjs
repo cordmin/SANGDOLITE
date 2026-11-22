@@ -33,11 +33,11 @@ test('Personal API release: standalone assets, prompts and direct Gemini respons
     assert.match(prompt, /과목별 세부능력 및 특기사항/);
     assert.match(prompt, /입력에 없는 수치나 별개 활동을 분량 채우기용으로 덧붙이지 말 것/);
     assert.match(prompt, /각 문단은 각각 공백 포함 250자에 가깝게/);
-    assert.match(prompt, /각 활동을 다루는 첫 문장은 반드시 선택한 활동명으로 시작/);
+    assert.match(prompt, /활동명이 문장의 맨 첫 낱말이 되게 쓸 것/);
     assert.match(prompt, /글자 수 설명을 절대 붙이지 말 것/);
     const version = vm.runInContext('GUIDE_VERSION', ctx);
-    assert.equal(version, '2.1.4');
-    const snapshot = JSON.parse(fs.readFileSync(path.join(root, 'docs/guide-versions/v2.1.4.json'), 'utf8'));
+    assert.equal(version, '2.1.8');
+    const snapshot = JSON.parse(fs.readFileSync(path.join(root, 'docs/guide-versions/v2.1.8.json'), 'utf8'));
     assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(GUIDE_DEFAULT)', ctx)), snapshot.guide);
     assert.match(prompt, /입력 속 \{생성 글자 수\}/);
     assert.match(ctx.buildPrompt({ ...data, area: '자율' }), /자율·자치활동/);
@@ -53,7 +53,7 @@ test('Personal API release: standalone assets, prompts and direct Gemini respons
     assert.ok(!/GAS_WEB_APP_URL|script\.google\.com|google\.script|gasGet\(|gasPost\(|adminLogin\(|guide-page/.test(html + app + ui));
     assert.match(html, /점검 결과/);
     assert.match(html, /API키 설정/);
-    assert.match(html, /지침 v2\.1\.4/);
+    assert.match(html, /지침 v2.1.8/);
     assert.ok(!app.includes('genCheckHtml') && !app.includes('rcCheckSpelling('));
     assert.ok(app.includes('copyGeneratedParagraph') && app.includes('result-byte-count'));
     for (const match of html.matchAll(/(?:src|href)="((?:assets|vendor|js|css)\/[^"?#]+)[^"]*"/g)) {
