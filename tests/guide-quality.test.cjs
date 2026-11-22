@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const root = path.join(__dirname, '..');
-const snapshot = JSON.parse(fs.readFileSync(path.join(root, 'docs/guide-versions/v2.1.7.json'), 'utf8'));
+const snapshot = JSON.parse(fs.readFileSync(path.join(root, 'docs/guide-versions/v2.1.8.json'), 'utf8'));
 const guide = snapshot.guide;
 const store = { GUIDE_ORDER: JSON.stringify(guide.order) };
 for (const [key, part] of Object.entries(guide.parts)) store['GUIDE_PART_' + key] = JSON.stringify(part);
@@ -36,3 +36,9 @@ assert.doesNotMatch(guide.parts.core_general.body, /자유롭게 써도 됨/);
 assert.match(guide.parts.check_general.body, /활동명이 처음 나오는 문장마다 활동명 앞에 다른 낱말이 있는지/);
 assert.match(guide.parts.check_general.body, /활동명이 문장 앞에 되풀이되지 않았는지/);
 console.log('Unified length, activity starts, connectors and no count notes verified in final server prompts');
+// v2.1.8: 활동명을 입력 그대로 유지하고, 활동이 많아도 빠짐없이 담으며, 마지막 점검에서 하나씩 대조
+assert.match(guide.parts.core_general.body, /활동이 많아도 하나도 빼지 말 것/);
+assert.match(guide.parts.core_general.body, /띄어쓰기와 가운뎃점까지 한 글자도 바꾸지 말고/);
+assert.match(guide.parts.core_general.body, /진로심리검사와 진로적성검사/);
+assert.match(guide.parts.check_general.body, /입력된 활동명을 하나씩 대조하여/);
+assert.match(guide.parts.check_general.body, /고친 과정이나 무엇이 아닌 무엇 같은 설명은 본문에 남기지 말 것/);
