@@ -687,10 +687,6 @@ function rcCheckOne(rec, settings, byteLen) {
     const sentences = text.split(/(?<=[.!?])\s+|\n+/).map(s => s.trim()).filter(Boolean);
     sentences.forEach((s, i) => {
         const tail = s.slice(-12);
-        if (i === sentences.length - 1 && /^[\[(]\s*(?:공백\s*포함\s*)?\d+\s*(?:자|바이트|bytes?)\s*[\])]$/i.test(s)) {
-            add('ending', 'check', s, '기록 문장 뒤에 글자 수·바이트 설명이 붙어 있어요. 설명을 빼고 기록 문장만 남겨 주세요.');
-            return;
-        }
         if (/[다요]\.?$/.test(s)) add('ending', 'check', tail, "'~다.'로 끝났어요. '~함.', '~임.'처럼 끝맺어 주세요.");
         else if (/[!?]$/.test(s)) add('ending', 'check', tail, '느낌표·물음표 대신 마침표로 끝맺어 주세요.');
         else if (i === sentences.length - 1 && !/\.$/.test(s)) add('ending', 'check', tail, '마지막 문장에 마침표가 빠졌어요.');
