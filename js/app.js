@@ -602,6 +602,7 @@ let guideEditing = false;
 let guideDrafts = {};      // 수정 중인 글 {key: text}
 let guideResetPending = false;
 const GUIDE_DEFAULT_VERSION = '2.1.0';
+const GUIDE_CURRENT_VERSION = '2.1.1'; // 기본 저장 지침 + 현재 추가 요청 규칙의 버전
 const GUIDE_VAR_LABELS = { '생성 문단 개수': '생성 문장 개수', '최소 글자 수': '최소 글자 수 = 생성 글자 수의 85%' }; // 파란 칸 이름을 화면 이름에 맞춰 보여 줌 (지침 속 이름은 그대로)
 
 function setWorkVisible(show) {
@@ -803,7 +804,7 @@ function guideVersion(guide) {
             guide.parts[key]?.title === part.title
             && normalize(guide.parts[key].body) === normalize(part.body))
         && ['behavior', 'general'].every(kind => JSON.stringify(guide.order[kind]) === JSON.stringify(GUIDE_DEFAULT.order[kind]));
-    return same ? GUIDE_DEFAULT_VERSION : `${GUIDE_DEFAULT_VERSION} · 수정됨`;
+    return same ? GUIDE_CURRENT_VERSION : `${GUIDE_CURRENT_VERSION} · 수정됨`;
 }
 
 function renderGuideActions() {
@@ -855,7 +856,7 @@ async function adminLogin() {
 async function fillDefaultGuide() {
     const current = guideFromDefault ? '미저장' : `v${guideVersion(guideData)}`;
     const preview = `<div><span>현재 버전</span><strong>${current}</strong></div><span class="confirm-arrow" aria-hidden="true">→</span><div><span>기본 버전</span><strong>v${GUIDE_DEFAULT_VERSION}</strong></div>`;
-    if (!await showConfirm('기본 지침으로 되돌릴까요?', `문장 생성 지침을 기본 버전 ${GUIDE_DEFAULT_VERSION}으로 돌리시겠습니까?\n불러온 뒤 [저장]을 누르면 기존 수정 내용이 바뀝니다.`, '기본 지침 불러오기', preview)) return;
+    if (!await showConfirm('기본 지침으로 되돌릴까요?', `저장 지침을 기본 버전 ${GUIDE_DEFAULT_VERSION}으로 돌리시겠습니까?\n불러온 뒤 [저장]을 누르면 기존 수정 내용이 바뀝니다.\n추가 요청 규칙(v${GUIDE_CURRENT_VERSION})은 유지됩니다.`, '기본 지침 불러오기', preview)) return;
     guideResetPending = true;
     guideDrafts = {};
     renderGuide();
