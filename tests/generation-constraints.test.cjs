@@ -27,16 +27,14 @@ const use = responses => {
     let result = await ctx.requestGeneration(payload);
     assert.equal(result.success, true);
     assert.equal(requests.length, 1);
-    assert.match(result.result, /^정·부반장 선거에/);
+    assert.equal(result.result, good, '활동명 등을 코드에서 몰래 교정하지 않음');
     assert.ok(ctx.getByteLength(result.result) >= 1425 && ctx.getByteLength(result.result) <= 1500);
     assert.equal(requests[0].charLimit, 500, '선택값을 바이트에서 역산해 바꾸지 않음');
-    assert.match(requests[0].cases, /문단 하나당 공백 포함 500자/);
-    assert.match(requests[0].cases, /아래 작성 규칙의 분량 기준/);
+    assert.equal(requests[0], payload, '입력에 작성 규칙을 주입하지 않고 그대로 전달');
     assert.equal(payload.cases, '정·부반장 선거', '사용자 원본을 변경하지 않음');
 
     // 모든 선택지에서 화면 선택값 → 요청 → 서버 조립 지침까지 글자 수를 동일하게 유지.
-    const guideContext = vm.createContext({});
-    vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js/guide-default.js'), 'utf8') + ';this.guide = GUIDE_DEFAULT;', guideContext);
+    const guideContext = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'docs/guide-versions/v2.1.3.json'), 'utf8'));
     const store = { GUIDE_ORDER: JSON.stringify(guideContext.guide.order) };
     for (const [key, part] of Object.entries(guideContext.guide.parts)) store['GUIDE_PART_' + key] = JSON.stringify(part);
     const server = vm.createContext({ PropertiesService: { getScriptProperties: () => ({ getProperties: () => store }) } });
@@ -48,7 +46,7 @@ const use = responses => {
         assert.equal(requests[0].charLimit, count);
         const prompt = server.buildPrompt(requests[0]);
         assert.match(prompt, new RegExp('공백 포함 ' + count + '자를 넘지'));
-        assert.match(prompt, new RegExp('문단 하나당 공백 포함 ' + count + '자'));
+        assert.equal(requests[0].cases, payload.cases);
         assert.ok(!/95%|95~100|238~250|475~500/.test(requests[0].cases), '클라이언트가 별도의 분량 범위를 만들지 않음');
         assert.ok(!/313자|625자|2\.4|각 활동에 약 \d+byte/.test(prompt));
     }
@@ -74,17 +72,25 @@ const use = responses => {
     result = await ctx.requestGeneration(payload);
     assert.equal(result.success, true);
     assert.equal(requests.length, 1);
-    assert.match(requests[0].cases, /빠짐없이 원래 표기대로/);
+    assert.equal(requests[0].cases, payload.cases);
 
     use([{ success: true, result: good }]);
     await ctx.requestGeneration({ ...payload, area: '진로', activities: ['직업인초청강연', '진로심리검사'], cases: '직업인초청강연, 진로심리검사' });
     assert.equal(requests.length, 1);
     const careerPrompt = server.buildPrompt(requests[0]);
-    assert.match(careerPrompt, /각 활동을 다루는 첫 문장은 반드시 해당 활동명으로 시작/);
+    assert.equal(requests[0].cases, '직업인초청강연, 진로심리검사');
+    assert.match(careerPrompt, /각 활동을 다루는 첫 문장은 반드시 선택한 활동명으로 시작/);
     assert.match(careerPrompt, /활동명 앞에 목적·배경·수식어를 붙이지 말 것/);
     assert.match(careerPrompt, /문단의 첫 문장뿐 아니라 다른 활동으로 바뀌는 문장에도 동일하게/);
-    assert.match(careerPrompt, /'이어서'.*같은 연결어를 붙이지 말 것/);
-    assert.match(careerPrompt, /직업인초청강연에 참여하여 …함\. 진로심리검사에 참여하여 …함\./);
+    assert.match(careerPrompt, /이어서, 이후, 그리고, 또한, 이와 함께 같은 연결어를 붙이지 말고/);
+    assert.match(careerPrompt, /직업인초청강연에 참여하여 …함\. 진로심리검사를 통해 …함\./);
+    // 관리자에서 규칙을 고치면 코드가 과거 규칙을 다시 덧붙이지 않음.
+    const edited = JSON.parse(store.GUIDE_PART_core_general);
+    edited.body = edited.body.replace('활동명 앞에 목적·배경·수식어를 붙이지 말 것.', '관리자가 고친 활동 시작 기준을 적용할 것.');
+    store.GUIDE_PART_core_general = JSON.stringify(edited);
+    const editedPrompt = server.buildPrompt(requests[0]);
+    assert.ok(!editedPrompt.includes('활동명 앞에 목적·배경·수식어를 붙이지 말 것.'));
+    assert.match(editedPrompt, /관리자가 고친 활동 시작 기준/);
 
     // 생성 표에서는 점검·하이라이트를 호출하지 않고 원문을 안전하게 표시.
     let row;
