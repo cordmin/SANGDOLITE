@@ -565,8 +565,7 @@ let guidePw = null;        // 관리자 비밀번호 (새로고침하면 사라�
 let guideEditing = false;
 let guideDrafts = {};      // 수정 중인 글 {key: text}
 let guideResetPending = false;
-const GUIDE_DEFAULT_VERSION = '2.0.0';
-const GUIDE_CUSTOM_VERSION = '2.1.0'; // 기본 지침과 다른 기존 저장본의 버전
+const GUIDE_DEFAULT_VERSION = '2.1.0';
 const GUIDE_VAR_LABELS = { '생성 문단 개수': '생성 문장 개수', '최소 글자 수': '최소 글자 수 = 생성 글자 수의 85%' }; // 파란 칸 이름을 화면 이름에 맞춰 보여 줌 (지침 속 이름은 그대로)
 
 function setWorkVisible(show) {
@@ -768,7 +767,7 @@ function guideVersion(guide) {
             guide.parts[key]?.title === part.title
             && normalize(guide.parts[key].body) === normalize(part.body))
         && ['behavior', 'general'].every(kind => JSON.stringify(guide.order[kind]) === JSON.stringify(GUIDE_DEFAULT.order[kind]));
-    return same ? GUIDE_DEFAULT_VERSION : GUIDE_CUSTOM_VERSION;
+    return same ? GUIDE_DEFAULT_VERSION : `${GUIDE_DEFAULT_VERSION} · 수정됨`;
 }
 
 function renderGuideActions() {
@@ -816,7 +815,7 @@ async function adminLogin() {
     } catch (err) { guideServerError(err); }
 }
 
-// 수정 중에 guide-default.js의 지침(2026 기재요령 반영)으로 칸을 채움. 저장을 눌러야 서버에 들어감
+// 보존한 기본 버전 전체를 편집 초안으로 불러옴. 저장을 눌러야 서버에 들어감.
 async function fillDefaultGuide() {
     const current = guideFromDefault ? '미저장' : `v${guideVersion(guideData)}`;
     const preview = `<div><span>현재 버전</span><strong>${current}</strong></div><span class="confirm-arrow" aria-hidden="true">→</span><div><span>기본 버전</span><strong>v${GUIDE_DEFAULT_VERSION}</strong></div>`;

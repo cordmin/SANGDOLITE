@@ -29,6 +29,8 @@ context.gasPost = async body => {
     return failSave ? { success: false, error: '저장 실패' } : { success: true, guide: body.guide };
 };
 const run = code => vm.runInContext(code, context);
+const snapshot = JSON.parse(fs.readFileSync(path.join(root, 'docs/guide-versions/v2.1.0.json'), 'utf8'));
+assert.deepEqual(JSON.parse(run('JSON.stringify(GUIDE_DEFAULT)')), snapshot, '확정된 기본 지침 스냅샷을 그대로 유지');
 
 (async () => {
     run(`guideData = JSON.parse(JSON.stringify(GUIDE_DEFAULT));
@@ -39,12 +41,12 @@ const run = code => vm.runInContext(code, context);
         guideDrafts.style = '저장 전 수정';
         renderGuide();`);
     assert.match(elements['guide-actions'].innerHTML, /version-badge current.*현재 버전.*v2\.1\.0/);
-    assert.match(elements['guide-actions'].innerHTML, /version-badge baseline.*기본 버전.*v2\.0\.0/);
+    assert.match(elements['guide-actions'].innerHTML, /version-badge baseline.*기본 버전.*v2\.1\.0/);
     assert.ok(!elements['guide-list'].innerHTML.includes('guide-notice'));
 
     // 복원 확인을 취소하면 작성 중인 내용도 보존한다.
     await context.fillDefaultGuide();
-    assert.match(question, /문장 생성 지침을 기본 버전 2\.0\.0으로 돌리시겠습니까/);
+    assert.match(question, /문장 생성 지침을 기본 버전 2\.1\.0으로 돌리시겠습니까/);
     assert.equal(run('guideDrafts.style'), '저장 전 수정');
     assert.equal(run('guideResetPending'), false);
 
@@ -62,14 +64,14 @@ const run = code => vm.runInContext(code, context);
     failSave = true;
     await context.saveGuide();
     assert.equal(run('guideResetPending'), true);
-    assert.equal(run('guideVersion(guideData)'), '2.1.0');
+    assert.equal(run('guideVersion(guideData)'), '2.1.0 · 수정됨');
     failSave = false;
     await context.saveGuide();
     assert.equal(run('guideResetPending'), false);
-    assert.equal(run('guideVersion(guideData)'), '2.0.0');
+    assert.equal(run('guideVersion(guideData)'), '2.1.0');
     assert.equal(requests.at(-1).guide.parts.extra, undefined);
     assert.ok(!requests.at(-1).guide.order.behavior.includes('extra'));
-    assert.match(elements['guide-actions'].innerHTML, /version-badge current.*v2\.0\.0/);
+    assert.match(elements['guide-actions'].innerHTML, /version-badge current.*v2\.1\.0/);
 
     // 기본값을 불러온 뒤 다시 고친 내용도 저장한다.
     run('guideEditing = true');
@@ -77,6 +79,6 @@ const run = code => vm.runInContext(code, context);
     run("guideDrafts.style = '다시 수정한 문체'");
     await context.saveGuide();
     assert.equal(requests.at(-1).guide.parts.style.body, '다시 수정한 문체');
-    assert.equal(run('guideVersion(guideData)'), '2.1.0');
+    assert.equal(run('guideVersion(guideData)'), '2.1.0 · 수정됨');
     console.log('Guide version and restore passed');
 })().catch(error => { console.error(error); process.exitCode = 1; });
