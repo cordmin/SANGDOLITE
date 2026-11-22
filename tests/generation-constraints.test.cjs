@@ -29,9 +29,29 @@ const use = responses => {
     assert.equal(requests.length, 1);
     assert.match(result.result, /^정·부반장 선거에/);
     assert.ok(ctx.getByteLength(result.result) >= 1425 && ctx.getByteLength(result.result) <= 1500);
-    assert.match(requests[0].cases, /약 1500byte/);
-    assert.match(requests[0].cases, /조금 초과하는 것은 허용/);
+    assert.equal(requests[0].charLimit, 500, '선택값을 바이트에서 역산해 바꾸지 않음');
+    assert.match(requests[0].cases, /문단 하나당 공백 포함 500자/);
+    assert.match(requests[0].cases, /475~500자/);
     assert.equal(payload.cases, '정·부반장 선거', '사용자 원본을 변경하지 않음');
+
+    // 모든 선택지에서 화면 선택값 → 요청 → 서버 조립 지침까지 글자 수를 동일하게 유지.
+    const guideContext = vm.createContext({});
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js/guide-default.js'), 'utf8') + ';this.guide = GUIDE_DEFAULT;', guideContext);
+    const store = { GUIDE_ORDER: JSON.stringify(guideContext.guide.order) };
+    for (const [key, part] of Object.entries(guideContext.guide.parts)) store['GUIDE_PART_' + key] = JSON.stringify(part);
+    const server = vm.createContext({ PropertiesService: { getScriptProperties: () => ({ getProperties: () => store }) } });
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'code.gs'), 'utf8'), server);
+    for (const count of [150, 250, 300, 500]) {
+        use([{ success: true, result: good }]);
+        await ctx.requestGeneration({ ...payload, charLimit: count });
+        assert.equal(requests.length, 1);
+        assert.equal(requests[0].charLimit, count);
+        const prompt = server.buildPrompt(requests[0]);
+        assert.match(prompt, new RegExp('공백 포함 ' + count + '자를 넘지'));
+        assert.match(prompt, new RegExp('문단 하나당 공백 포함 ' + count + '자'));
+        assert.match(prompt, new RegExp(Math.ceil(count * .95) + '~' + count + '자'));
+        assert.ok(!/313자|625자|2\.4|각 활동에 약 \d+byte/.test(prompt));
+    }
 
     use([{ success: true, result: oversized }]);
     result = await ctx.requestGeneration(payload);
