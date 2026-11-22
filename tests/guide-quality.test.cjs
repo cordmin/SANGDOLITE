@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const root = path.join(__dirname, '..');
-const snapshot = JSON.parse(fs.readFileSync(path.join(root, 'docs/guide-versions/v2.1.4.json'), 'utf8'));
+const snapshot = JSON.parse(fs.readFileSync(path.join(root, 'docs/guide-versions/v2.1.5.json'), 'utf8'));
 const guide = snapshot.guide;
 const store = { GUIDE_ORDER: JSON.stringify(guide.order) };
 for (const [key, part] of Object.entries(guide.parts)) store['GUIDE_PART_' + key] = JSON.stringify(part);
@@ -27,4 +27,9 @@ assert.match(guide.parts.check_general.body, /앞에 붙은 목적·배경 설�
 assert.match(guide.parts.check_behavior.body, /\(146자\), \(147자\) 같은 글자 수 설명/);
 assert.match(guide.parts.forbidden.body, /가운뎃점은 유지/);
 assert.match(guide.parts.length.body, /고정 문장 수나 활동당 제한이 아니라/);
+// v2.1.5: 같은 활동을 이어 쓰는 문장은 활동명을 되풀이하지 않고, 연결어 금지는 활동이 바뀔 때만 적용
+assert.match(guide.parts.core_general.body, /같은 활동을 이어서 풀어 쓰는 문장은 활동명을 문장 앞에 다시 쓰지 말 것/);
+assert.match(guide.parts.core_general.body, /연결어 금지는 다른 활동으로 넘어가는 문장에만 해당/);
+assert.match(guide.parts.core_general.body, /이해를 넓힘\. 이 과정에서/);
+assert.match(guide.parts.check_general.body, /활동명이 문장 앞에 되풀이되지 않았는지/);
 console.log('Unified length, activity starts, connectors and no count notes verified in final server prompts');

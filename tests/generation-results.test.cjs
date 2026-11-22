@@ -29,7 +29,7 @@ async function generate(count, responses, variant = 'gas') {
         showModal: (title, message) => messages.push({ title, message }),
         translateError: String, escapeHtml: String,
     });
-    const releaseSource = variant === 'release' ? fs.readFileSync(path.join(__dirname, '..', '생기부 작성 도우미(배포용)', 'js', 'app.js'), 'utf8') : '';
+    const releaseSource = variant === 'release' ? fs.readFileSync(path.join(__dirname, '..', '생활기록부도우미LITE(배포용)', 'js', 'app.js'), 'utf8') : '';
     vm.runInContext(variant === 'release' ? releaseSource.match(/async function runAI\(\) \{[\s\S]*?\n\}/)[0] : runAI, context);
     await context.runAI();
     assert.equal(elements['run-btn'].disabled, false);
@@ -37,7 +37,7 @@ async function generate(count, responses, variant = 'gas') {
 }
 
 (async () => {
-    const variants = fs.existsSync(path.join(__dirname, '..', '생기부 작성 도우미(배포용)', 'js', 'app.js')) ? ['gas', 'release'] : ['gas'];
+    const variants = fs.existsSync(path.join(__dirname, '..', '생활기록부도우미LITE(배포용)', 'js', 'app.js')) ? ['gas', 'release'] : ['gas'];
     for (const variant of variants) {
         const run = (count, responses) => generate(count, responses, variant);
         for (const response of [

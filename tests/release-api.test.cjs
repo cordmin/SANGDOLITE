@@ -5,7 +5,7 @@ const vm = require('node:vm');
 const { test } = require('node:test');
 
 const root = path.join(__dirname, '..');
-const release = path.join(root, '생기부 작성 도우미(배포용)');
+const release = path.join(root, '생활기록부도우미LITE(배포용)');
 
 test('Personal API release: standalone assets, prompts and direct Gemini responses', { skip: !fs.existsSync(release) }, async () => {
     const store = {};
@@ -31,7 +31,14 @@ test('Personal API release: standalone assets, prompts and direct Gemini respons
     assert.ok(!calls[0].url.includes('TEST_PERSONAL_KEY'));
     const prompt = JSON.parse(calls[0].options.body).contents[0].parts[0].text;
     assert.match(prompt, /과목별 세부능력 및 특기사항/);
-    assert.match(prompt, /입력에 없는 활동·성과·수치를 지어내거나 부풀리지 말 것/);
+    assert.match(prompt, /입력에 없는 수치나 별개 활동을 분량 채우기용으로 덧붙이지 말 것/);
+    assert.match(prompt, /각 문단은 각각 공백 포함 250자에 가깝게/);
+    assert.match(prompt, /각 활동을 다루는 첫 문장은 반드시 선택한 활동명으로 시작/);
+    assert.match(prompt, /글자 수 설명을 절대 붙이지 말 것/);
+    const version = vm.runInContext('GUIDE_VERSION', ctx);
+    assert.equal(version, '2.1.4');
+    const snapshot = JSON.parse(fs.readFileSync(path.join(root, 'docs/guide-versions/v2.1.4.json'), 'utf8'));
+    assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(GUIDE_DEFAULT)', ctx)), snapshot.guide);
     assert.match(prompt, /입력 속 \{생성 글자 수\}/);
     assert.match(ctx.buildPrompt({ ...data, area: '자율' }), /자율·자치활동/);
     answer = { candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [{ text: '완성 문단.\n미완성' }] } }] };
@@ -46,6 +53,9 @@ test('Personal API release: standalone assets, prompts and direct Gemini respons
     assert.ok(!/GAS_WEB_APP_URL|script\.google\.com|google\.script|gasGet\(|gasPost\(|adminLogin\(|guide-page/.test(html + app + ui));
     assert.match(html, /점검 결과/);
     assert.match(html, /API키 설정/);
+    assert.match(html, /지침 v2\.1\.4/);
+    assert.ok(!app.includes('genCheckHtml') && !app.includes('rcCheckSpelling('));
+    assert.ok(app.includes('copyGeneratedParagraph') && app.includes('result-byte-count'));
     for (const match of html.matchAll(/(?:src|href)="((?:assets|vendor|js|css)\/[^"?#]+)[^"]*"/g)) {
         assert.ok(fs.existsSync(path.join(release, match[1])), '배포 파일 누락: ' + match[1]);
     }

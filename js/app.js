@@ -198,7 +198,8 @@ function selArea(v, el) {
     const subjInp = document.getElementById('subj-inp');
 
     rawGeneratedText = tabStates[area].resultText || "";
-    document.getElementById('result-tbody').innerHTML = tabStates[area].resultHtml || FILLER_ROW;
+    if (rawGeneratedText) renderTable(rawGeneratedText.split('\n'));
+    else document.getElementById('result-tbody').innerHTML = FILLER_ROW;
 
     document.getElementById('student-count').value = 1;
     document.getElementById('student-count').dataset.validCount = '1';
@@ -472,21 +473,26 @@ function getByteLength(text) {
 async function copyGeneratedParagraph(text, button) {
     if (button.disabled) return;
     button.disabled = true;
+    // 클릭 직후 동기 복사를 먼저 시도: 창 포커스·권한·iframe 제한에 걸리는 clipboard API보다 확실함.
     let copied = false;
+    const input = document.createElement('textarea');
+    input.value = text;
+    input.setAttribute('readonly', '');
+    input.style.cssText = 'position:fixed;left:-9999px;top:0;';
+    document.body.appendChild(input);
     try {
-        await navigator.clipboard.writeText(text);
-        copied = true;
-    } catch {
-        const input = document.createElement('textarea');
-        input.value = text;
-        input.setAttribute('readonly', '');
-        input.style.cssText = 'position:fixed;left:-9999px;top:0;';
-        document.body.appendChild(input);
+        input.select();
+        copied = document.execCommand('copy');
+    } catch { /* 아래 clipboard API로 재시도 */ }
+    finally { input.remove(); button.focus({ preventScroll: true }); }
+    if (!copied && navigator.clipboard) {
         try {
-            input.select();
-            copied = document.execCommand('copy');
-        } catch { /* 브라우저가 두 복사 방식 모두 제한하면 아래에서 안내 */ }
-        finally { input.remove(); button.focus({ preventScroll: true }); }
+            await Promise.race([
+                navigator.clipboard.writeText(text),
+                new Promise((_, reject) => setTimeout(reject, 1500)) // 권한 대기로 멈추지 않게
+            ]);
+            copied = true;
+        } catch { /* 두 방식 모두 막히면 아래에서 안내 */ }
     }
     button.disabled = false;
     if (!copied) {
@@ -506,11 +512,8 @@ function renderTable(items) {
     tbody.innerHTML = '';
     items.forEach((item, index) => {
         const cleanText = item.trim().replace(/^(?:\d+[\.\)\-]*\s*)+/, '').trim();
-        const split = cleanText.lastIndexOf(' ') + 1;
-        const prefix = escapeHtml(cleanText.slice(0, split)).replace(/\n/g, '<br>');
-        const lastWord = escapeHtml(cleanText.slice(split)).replace(/\n/g, '<br>');
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td class="excel-num">${index + 1}</td><td class="result-cell">${prefix}<span class="result-end"><span>${lastWord}</span><button type="button" class="result-copy" aria-label="${index + 1}번 문단 복사"><i data-lucide="copy" aria-hidden="true"></i><span>복사</span></button></span></td><td class="excel-byte">${Array.from(cleanText).length}자<br><span class="result-byte-count">(${getByteLength(cleanText)}byte)</span></td>`;
+        tr.innerHTML = `<td class="excel-num">${index + 1}</td><td class="result-cell">${escapeHtml(cleanText).replace(/\n/g, '<br>')}<button type="button" class="result-copy" aria-label="${index + 1}번 문단 복사"><i data-lucide="copy" aria-hidden="true"></i><span>복사</span></button></td><td class="excel-byte">${Array.from(cleanText).length}자<br><span class="result-byte-count">(${getByteLength(cleanText)}byte)</span></td>`;
         tr.querySelector('.result-copy').addEventListener('click', event => copyGeneratedParagraph(cleanText, event.currentTarget));
         tbody.appendChild(tr);
     });
@@ -530,7 +533,7 @@ function exportExcel(tableId, fileName) {
         table.innerHTML = '<thead><tr><th>순</th><th>특기사항</th><th>글자 수</th></tr></thead>';
         const clonedBody = bodyTable.tBodies[0].cloneNode(true);
         clonedBody.querySelectorAll('.filler-row, .gen-warn, .result-copy').forEach(r => r.remove());
-        // 마지막 단어를 감싼 span을 없애, 엑셀 변환기가 앞 공백을 따로 잘라내지 않게 함.
+        // 칸 안의 태그를 없애 글자만 남김.
         clonedBody.querySelectorAll('.result-cell').forEach(cell => { cell.textContent = cell.textContent; });
         table.appendChild(clonedBody);
 
@@ -593,7 +596,7 @@ let guideDrafts = {};      // 수정 중인 글 {key: text}
 let guideResetPending = false;
 let guideReleaseData = null; // 표시용 버전 비교만 수행하며, 생성 지침으로 사용하지 않음
 const GUIDE_DEFAULT_VERSION = '2.1.0';
-const GUIDE_CURRENT_VERSION = '2.1.4';
+const GUIDE_CURRENT_VERSION = '2.1.5';
 const GUIDE_VAR_LABELS = { '생성 문단 개수': '생성 문장 개수', '최소 글자 수': '최소 글자 수 = 생성 글자 수의 85%' }; // 파란 칸 이름을 화면 이름에 맞춰 보여 줌 (지침 속 이름은 그대로)
 
 function setWorkVisible(show) {
