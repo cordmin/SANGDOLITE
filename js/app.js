@@ -481,16 +481,53 @@ function getByteLength(text) {
     return bytes;
 }
 
+async function copyGeneratedParagraph(text, button) {
+    if (button.disabled) return;
+    button.disabled = true;
+    let copied = false;
+    try {
+        await navigator.clipboard.writeText(text);
+        copied = true;
+    } catch {
+        const input = document.createElement('textarea');
+        input.value = text;
+        input.setAttribute('readonly', '');
+        input.style.cssText = 'position:fixed;left:-9999px;top:0;';
+        document.body.appendChild(input);
+        try {
+            input.select();
+            copied = document.execCommand('copy');
+        } catch { /* 브라우저가 두 복사 방식 모두 제한하면 아래에서 안내 */ }
+        finally { input.remove(); button.focus({ preventScroll: true }); }
+    }
+    button.disabled = false;
+    if (!copied) {
+        showToast('복사하지 못했어요. 문장을 선택한 뒤 Ctrl+C로 복사해 주세요.', 'error');
+        return;
+    }
+    button.innerHTML = '<i data-lucide="check" aria-hidden="true"></i><span>완료</span>';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    setTimeout(() => {
+        button.innerHTML = '<i data-lucide="copy" aria-hidden="true"></i><span>복사</span>';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }, 1600);
+}
+
 function renderTable(items) {
     const tbody = document.getElementById('result-tbody');
     tbody.innerHTML = '';
     items.forEach((item, index) => {
         const cleanText = item.trim().replace(/^(?:\d+[\.\)\-]*\s*)+/, '').trim();
+        const split = cleanText.lastIndexOf(' ') + 1;
+        const prefix = escapeHtml(cleanText.slice(0, split)).replace(/\n/g, '<br>');
+        const lastWord = escapeHtml(cleanText.slice(split)).replace(/\n/g, '<br>');
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td class="excel-num">${index + 1}</td><td class="result-cell">${escapeHtml(cleanText).replace(/\n/g, '<br>')}</td><td class="excel-byte">${Array.from(cleanText).length}자<br><span class="result-byte-count">(${getByteLength(cleanText)}byte)</span></td>`;
+        tr.innerHTML = `<td class="excel-num">${index + 1}</td><td class="result-cell">${prefix}<span class="result-end"><span>${lastWord}</span><button type="button" class="result-copy" aria-label="${index + 1}번 문단 복사"><i data-lucide="copy" aria-hidden="true"></i><span>복사</span></button></span></td><td class="excel-byte">${Array.from(cleanText).length}자<br><span class="result-byte-count">(${getByteLength(cleanText)}byte)</span></td>`;
+        tr.querySelector('.result-copy').addEventListener('click', event => copyGeneratedParagraph(cleanText, event.currentTarget));
         tbody.appendChild(tr);
     });
     tbody.insertAdjacentHTML('beforeend', FILLER_ROW); // 표 아래 빈 공간 채우기
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function exportExcel(tableId, fileName) {
@@ -504,7 +541,9 @@ function exportExcel(tableId, fileName) {
         const table = document.createElement('table');
         table.innerHTML = '<thead><tr><th>순</th><th>특기사항</th><th>글자 수</th></tr></thead>';
         const clonedBody = bodyTable.tBodies[0].cloneNode(true);
-        clonedBody.querySelectorAll('.filler-row, .gen-warn').forEach(r => r.remove());
+        clonedBody.querySelectorAll('.filler-row, .gen-warn, .result-copy').forEach(r => r.remove());
+        // 마지막 단어를 감싼 span을 없애, 엑셀 변환기가 앞 공백을 따로 잘라내지 않게 함.
+        clonedBody.querySelectorAll('.result-cell').forEach(cell => { cell.textContent = cell.textContent; });
         table.appendChild(clonedBody);
 
         const wb = XLSX.utils.book_new();

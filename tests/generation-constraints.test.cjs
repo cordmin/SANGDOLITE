@@ -59,7 +59,7 @@ const use = responses => {
     // 생성 표에서는 점검·하이라이트를 호출하지 않고 원문을 안전하게 표시.
     let row;
     const table = { innerHTML: '', appendChild(value) { row = value; }, insertAdjacentHTML() {} };
-    Object.assign(ctx, { document: { getElementById: () => table, createElement: () => ({}) }, FILLER_ROW: '', escapeHtml: text => text.replace(/</g, '&lt;').replace(/>/g, '&gt;'), rcCheckOne() { throw Error('자동 점검 금지'); } });
+    Object.assign(ctx, { document: { getElementById: () => table, createElement: () => ({ querySelector: () => ({ addEventListener() {} }) }) }, FILLER_ROW: '', escapeHtml: text => text.replace(/</g, '&lt;').replace(/>/g, '&gt;'), rcCheckOne() { throw Error('자동 점검 금지'); } });
     vm.runInContext(source.match(/function renderTable\(items\) \{[^]*?\n\}/)[0], ctx);
     ctx.renderTable(['장애인식개선교육 <원문>.']);
     assert.match(row.innerHTML, /&lt;원문&gt;/);
