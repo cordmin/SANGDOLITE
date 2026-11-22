@@ -53,7 +53,7 @@ test('Personal API release: standalone assets, prompts and direct Gemini respons
     assert.ok(!/GAS_WEB_APP_URL|script\.google\.com|google\.script|gasGet\(|gasPost\(|adminLogin\(|guide-page/.test(html + app + ui));
     assert.match(html, /점검 결과/);
     assert.match(html, /API키 설정/);
-    assert.match(html, /지침 v2.1.8/);
+    assert.ok(!html.includes("release-guide-version"), "API키 설정 위 지침 버전 배지 없음");
     assert.ok(!app.includes('genCheckHtml') && !app.includes('rcCheckSpelling('));
     assert.ok(app.includes('copyGeneratedParagraph') && app.includes('result-byte-count'));
     for (const match of html.matchAll(/(?:src|href)="((?:assets|vendor|js|css)\/[^"?#]+)[^"]*"/g)) {
