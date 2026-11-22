@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const root = path.join(__dirname, '..');
-const snapshot = JSON.parse(fs.readFileSync(path.join(root, 'docs/guide-versions/v2.1.6.json'), 'utf8'));
+const snapshot = JSON.parse(fs.readFileSync(path.join(root, 'docs/guide-versions/v2.1.7.json'), 'utf8'));
 const guide = snapshot.guide;
 const store = { GUIDE_ORDER: JSON.stringify(guide.order) };
 for (const [key, part] of Object.entries(guide.parts)) store['GUIDE_PART_' + key] = JSON.stringify(part);
@@ -22,19 +22,17 @@ for (const area of ['자율', '진로', '동아리', '과세특', '행동특성'
 }
 assert.ok(guide.order.general.indexOf('length') < guide.order.general.indexOf('core_general'));
 assert.ok(guide.order.behavior.indexOf('length') < guide.order.behavior.indexOf('core_behavior'));
-assert.match(guide.parts.core_general.body, /활동명 앞에 목적·배경·수식어를 붙이지 말 것/);
-assert.match(guide.parts.check_general.body, /앞에 붙은 목적·배경 설명이나 이어서 같은 연결어는 제거/);
 assert.match(guide.parts.check_behavior.body, /\(146자\), \(147자\) 같은 글자 수 설명/);
 assert.match(guide.parts.forbidden.body, /가운뎃점은 유지/);
 assert.match(guide.parts.length.body, /고정 문장 수나 활동당 제한이 아니라/);
-// v2.1.5: 같은 활동을 이어 쓰는 문장은 활동명을 되풀이하지 않고, 연결어 금지는 활동이 바뀔 때만 적용
-assert.match(guide.parts.core_general.body, /같은 활동을 이어서 풀어 쓰는 문장은 활동명을 문장 앞에 다시 쓰지 말 것/);
+// v2.1.7: 활동 시작은 활동명이 맨 첫 낱말, 이어받는 말은 같은 활동의 두 번째 문장부터, 끌어오기·묶음 마무리 금지
+assert.match(guide.parts.core_general.body, /활동명이 문장의 맨 첫 낱말이 되게 쓸 것/);
+assert.match(guide.parts.core_general.body, /활동명 앞에는 이어서, 이와 함께, 나아가, 또한/);
+assert.match(guide.parts.core_general.body, /같은 활동의 두 번째 문장부터는 활동명을 문장 앞에 다시 쓰지 말 것/);
+assert.match(guide.parts.core_general.body, /이어받는 말 뒤에 다른 활동명을 쓰지 말 것/);
+assert.match(guide.parts.core_general.body, /여러 활동을 묶어 정리하는 마무리 문장을 쓰지 말고/);
 assert.match(guide.parts.core_general.body, /이해를 넓힘\. 이 과정에서/);
+assert.doesNotMatch(guide.parts.core_general.body, /자유롭게 써도 됨/);
+assert.match(guide.parts.check_general.body, /활동명이 처음 나오는 문장마다 활동명 앞에 다른 낱말이 있는지/);
 assert.match(guide.parts.check_general.body, /활동명이 문장 앞에 되풀이되지 않았는지/);
-// v2.1.6: 같은 활동 안의 이어 주는 말은 허용, 연결어 금지·제거는 다른 활동으로 넘어가는 문장에만
-assert.match(guide.parts.core_general.body, /또한, 특히, 나아가, 이를 바탕으로/);
-assert.match(guide.parts.core_general.body, /같은 활동 안에서는 이런 이어 주는 말을 자유롭게 써도 됨/);
-assert.match(guide.parts.core_general.body, /다른 활동으로 넘어가는 문장에서만, 활동명 앞에/);
-assert.match(guide.parts.check_general.body, /다른 활동으로 넘어가는 문장의 활동명 앞에 붙은/);
-assert.match(guide.parts.check_general.body, /같은 활동 안에서 문장을 이어 주는 말은 지우지 말 것/);
 console.log('Unified length, activity starts, connectors and no count notes verified in final server prompts');

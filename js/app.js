@@ -596,7 +596,7 @@ let guideDrafts = {};      // 수정 중인 글 {key: text}
 let guideResetPending = false;
 let guideReleaseData = null; // 표시용 버전 비교만 수행하며, 생성 지침으로 사용하지 않음
 const GUIDE_DEFAULT_VERSION = '2.1.0';
-const GUIDE_CURRENT_VERSION = '2.1.6';
+const GUIDE_CURRENT_VERSION = '2.1.7';
 const GUIDE_VAR_LABELS = { '생성 문단 개수': '생성 문장 개수', '최소 글자 수': '최소 글자 수 = 생성 글자 수의 85%' }; // 파란 칸 이름을 화면 이름에 맞춰 보여 줌 (지침 속 이름은 그대로)
 
 function setWorkVisible(show) {
