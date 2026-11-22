@@ -11,6 +11,13 @@ vm.runInContext(app.match(/function getByteLength\(text\) \{[\s\S]*?\n\}/)[0], c
 vm.runInContext(fs.readFileSync(path.join(root, 'js', 'record-check.js'), 'utf8') + ';this.S = RC_DEFAULT_SETTINGS; this.RC_DEFAULT_GUIDE = RC_DEFAULT_GUIDE;', ctx);
 const { rcParseRows, rcCheckAll, rcHighlight, getByteLength, S } = ctx;
 
+for (const suffix of ['(146자)', '(147자)', '[공백 포함 250자]', '(1500byte)']) {
+    const issues = rcCheckAll([{ area: '행동특성 및 종합의견', subject: '', name: '검증', text: '성실한 태도로 참여함. ' + suffix }], S, getByteLength)[0].issues.filter(issue => issue.type === 'ending');
+    assert.equal(issues.length, 1);
+    assert.match(issues[0].why, /글자 수·바이트 설명/);
+    assert.ok(!issues[0].why.includes('마침표가 빠졌어요'));
+}
+
 // 위에 제목 줄, 합쳐진 칸, 두 줄로 나뉜 긴 글
 const rows = [
     ['교과학습발달상황 세부능력 및 특기사항'], [],

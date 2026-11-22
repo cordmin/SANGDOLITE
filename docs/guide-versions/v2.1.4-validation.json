@@ -1,0 +1,171 @@
+{
+    "version": "2.1.4",
+    "date": "2026-11-23",
+    "syntheticInputs": true,
+    "totals": {
+        "requests": 7,
+        "paragraphs": 14
+    },
+    "runs": [
+        {
+            "stage": 1,
+            "requests": [
+                {
+                    "area": "자율",
+                    "charLimit": 250,
+                    "sentenceCount": 2
+                },
+                {
+                    "area": "진로",
+                    "charLimit": 500,
+                    "sentenceCount": 2
+                },
+                {
+                    "area": "동아리",
+                    "charLimit": 250,
+                    "sentenceCount": 2
+                },
+                {
+                    "area": "과세특",
+                    "charLimit": 500,
+                    "sentenceCount": 2
+                },
+                {
+                    "area": "행동특성",
+                    "charLimit": 150,
+                    "sentenceCount": 2
+                }
+            ],
+            "paragraphs": [
+                {
+                    "area": "자율",
+                    "target": 250,
+                    "characters": [
+                        209,
+                        210
+                    ],
+                    "bytes": [
+                        533,
+                        532
+                    ]
+                },
+                {
+                    "area": "진로",
+                    "target": 500,
+                    "characters": [
+                        451,
+                        465
+                    ],
+                    "bytes": [
+                        1117,
+                        1149
+                    ]
+                },
+                {
+                    "area": "동아리",
+                    "target": 250,
+                    "characters": [
+                        225,
+                        233
+                    ],
+                    "bytes": [
+                        557,
+                        587
+                    ]
+                },
+                {
+                    "area": "과세특",
+                    "target": 500,
+                    "characters": [
+                        348,
+                        341
+                    ],
+                    "bytes": [
+                        870,
+                        849
+                    ]
+                },
+                {
+                    "area": "행동특성",
+                    "target": 150,
+                    "characters": [
+                        165,
+                        182
+                    ],
+                    "bytes": [
+                        407,
+                        454
+                    ]
+                }
+            ],
+            "checkSummary": {
+                "records": 10,
+                "flaggedRecords": 0,
+                "issues": {}
+            }
+        },
+        {
+            "stage": 2,
+            "requests": [
+                {
+                    "area": "과세특",
+                    "charLimit": 500,
+                    "sentenceCount": 2
+                }
+            ],
+            "paragraphs": [
+                {
+                    "area": "과세특",
+                    "target": 500,
+                    "characters": [
+                        342,
+                        347
+                    ],
+                    "bytes": [
+                        854,
+                        865
+                    ]
+                }
+            ],
+            "checkSummary": {
+                "records": 2,
+                "flaggedRecords": 0,
+                "issues": {}
+            }
+        },
+        {
+            "stage": 3,
+            "requests": [
+                {
+                    "area": "과세특",
+                    "charLimit": 500,
+                    "sentenceCount": 2
+                }
+            ],
+            "paragraphs": [
+                {
+                    "area": "과세특",
+                    "target": 500,
+                    "characters": [
+                        403,
+                        379
+                    ],
+                    "bytes": [
+                        999,
+                        947
+                    ]
+                }
+            ],
+            "checkSummary": {
+                "records": 2,
+                "flaggedRecords": 0,
+                "issues": {}
+            }
+        }
+    ],
+    "limitations": [
+        "세특 최종 500자 요청에서 403·379자로 편차가 남음.",
+        "사전 기반 점검으로는 문맥상 잘못 쓰인 정상 어절을 모두 판별할 수 없음.",
+        "검증 중 서버 지침을 단계적으로 보완했으므로 모든 표본이 최종 지침에서 생성된 것은 아님."
+    ]
+}
