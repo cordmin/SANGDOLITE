@@ -45,10 +45,13 @@ assert.equal(retired.length, 26);
 await self.onmessage({ data: { id: 3, words: [...retired.map(row => row.wrong), '역활을'] } });
 for (const row of retired) assert.ok(row.wrong in replies[2].spellings, row.wrong);
 
-// 문장 생성 결과에도 사전 결과가 전달되어 삭제한 규칙의 검사 범위를 유지함.
-Object.assign(context, { area: '자율', AREA_NAMES: { 자율: '자율·자치활동' }, getByteLength: text => text.length, escapeHtml: text => text });
-const app = await readFile(new URL('../js/app.js', import.meta.url), 'utf8');
-vm.runInContext(app.match(/function genCheckHtml\(text, spellings = \{\}\) \{[\s\S]*?\n\}/)[0], context);
-context.spellings = replies[2].spellings;
-assert.match(vm.runInContext("genCheckHtml('역활을 맡음.', spellings)", context), /<mark[^>]*>역활을<\/mark>/);
+// 사전 미등록이나 그럴듯한 교정 후보만으로 정상적인 교육 활동명을 문제로 표시하지 않음.
+const normal = '장애인식개선교육 프로그램에 참여함. 학교폭력예방교육에서 민주주의적 태도를 보임. 정·부반장 선거에 참여함.';
+await self.onmessage({ data: { id: 4, words: ['장애인식개선교육', '학교폭력예방교육에서', '민주주의적', '반장선거에'] } });
+const normalResult = rcCheckAll([{ ...records[0], text: normal }], { ...RC_DEFAULT_SETTINGS, spellings: replies[3].spellings }, text => Buffer.byteLength(text));
+assert.equal(normalResult[0].issues.filter(issue => issue.type === 'spell').length, 0);
+const badSuggestions = { 장애인식개선교육: [], 학교폭력예방교육에서: ['학교폭력예방 교육에서'], 민주주의적: ['민주주의 직'] };
+assert.equal(rcCheckAll([{ ...records[0], text: normal }], { ...RC_DEFAULT_SETTINGS, spellings: badSuggestions }, text => Buffer.byteLength(text))[0].issues.filter(issue => issue.type === 'spell').length, 0);
+const known = rcCheckAll([{ ...records[0], text: '역활을 맡음. 설겆이를 함.' }], { ...RC_DEFAULT_SETTINGS, spellings: replies[2].spellings }, text => Buffer.byteLength(text));
+assert.ok(known[0].issues.some(issue => issue.type === 'spell' && issue.what === '역활을'));
 console.log('Offline Hunspell dictionary and record integration passed');

@@ -247,12 +247,53 @@ function renderCharOptions() {
     const opts = CHAR_OPTIONS[area] || [250, 500];
     if (!opts.includes(charLimit)) charLimit = opts[0];
     const sel = document.getElementById('char-select');
-    sel.innerHTML = opts.map(n => `<option value="${n}">${n}자 (약 ${n * 3}byte)</option>`).join('');
+    sel.innerHTML = opts.map(n => `<option value="${n}">${n}자 (${n * 3}byte)</option>`).join('');
     sel.value = charLimit;
+    updateCharLabel();
 }
 
 function selChar(v) {
     charLimit = v;
+    updateCharLabel();
+}
+
+function updateCharLabel() {
+    document.getElementById('char-option-label').innerHTML = `<strong>${charLimit}자</strong><span>(${charLimit * 3}byte)</span>`;
+}
+
+function generationLines(text, activities = []) {
+    return String(text || '').split('\n')
+        .map(line => line.trim().replace(/^(?:\d+[\.\)\-]*\s*)+/, '').trim())
+        .filter(Boolean).map(line => {
+            const election = activities.find(name => /^정[·ㆍ]부반장\s*선거$/.test(name));
+            return election ? line.replace(/정\s*[·ㆍ]?\s*(?:부\s*)?반장\s*선거/g, election) : line;
+        });
+}
+
+async function sendGenerationRequest(body) {
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+        return new Promise((resolve, reject) => {
+            google.script.run.withSuccessHandler(resolve)
+                .withFailureHandler(error => reject(new Error(error?.message || String(error))))
+                .generateRecordFromAI(body);
+        });
+    }
+    if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) throw new Error('GAS 웹 앱 배포 URL이 설정되지 않았습니다.');
+    const response = await fetch(GAS_WEB_APP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
+    return response.json();
+}
+
+async function requestGeneration(payload) {
+    const byteLimit = payload.charLimit * 3;
+    const activities = payload.activities || [];
+    // 공백은 1byte이므로 '한글 글자 수 × 3'을 글자 수 상한으로 쓰면 목표 바이트를 채우기 어려움.
+    const requestedChars = Math.ceil(byteLimit / 2.4);
+    const conditions = `각 문단 하나하나를 약 ${byteLimit}byte 분량으로 충분히 작성할 것. 한글은 3byte, 영문·숫자·공백은 1byte이며, 공백을 포함하면 대략 ${requestedChars}자 안팎이 필요함. 목표보다 크게 짧게 끝내지 말고, 조금 초과하는 것은 허용함. 입력 내용에 관련된 행동·참여 태도·배운 점을 자연스럽게 풀어 쓰되 무관한 활동이나 장황한 이야기를 추가하거나 같은 내용을 반복하지 말 것.`
+        + (activities.length ? ` 선택한 활동명 ${activities.map(name => JSON.stringify(name)).join(', ')}을 빠짐없이 원래 표기대로 담을 것. 활동명의 가운뎃점은 유지할 것. 각 활동에 약 ${Math.round(byteLimit / activities.length)}byte씩 비슷한 분량을 배분해 문단 전체가 목표 분량에 가깝도록 작성할 것.` : '');
+    const body = { ...payload, charLimit: requestedChars,
+        cases: `${payload.cases}\n\n[아래는 활동 내용이 아닌 이번 생성의 작성 조건]\n${conditions}` };
+    const res = await sendGenerationRequest(body);
+    return { ...res, result: generationLines(res.result, activities).join('\n') };
 }
 
 function updateKeywords() {
@@ -366,33 +407,14 @@ async function runAI() {
             sentenceCount: chunk.sentenceCount,
             subject: document.getElementById('subj-inp').value,
             cases: chunk.cases,
+            activities: area === '자율' || area === '진로' ? selectedAutonomyBadges.map(b => b.text.trim()).filter(Boolean) : [],
             posKeywords: pickKeywords('pos'),
             negKeywords: pickKeywords('neg'),
             keywords: Array.from(selectedKeywords.keys()).join(', ') // 예전 서버 호환용
         };
 
         try {
-            let res;
-            if (typeof google !== 'undefined' && google.script && google.script.run) {
-                res = await new Promise((resolve, reject) => {
-                    google.script.run
-                        .withSuccessHandler(resolve)
-                        .withFailureHandler(err => reject(new Error(err && err.message ? err.message : String(err))))
-                        .generateRecordFromAI(payload);
-                });
-            } else {
-                if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes("YOUR_GAS_WEB_APP_URL_HERE")) {
-                    throw new Error("GAS 웹 앱 배포 URL이 설정되지 않았습니다. index.html 파일의 GAS_WEB_APP_URL 변수에 배포된 URL을 입력하세요.");
-                }
-                const response = await fetch(GAS_WEB_APP_URL, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "text/plain;charset=utf-8"
-                    },
-                    body: JSON.stringify(payload)
-                });
-                res = await response.json();
-            }
+            const res = await requestGeneration(payload);
 
             clearInterval(progressInterval);
 
@@ -430,18 +452,11 @@ async function runAI() {
     loadBar.style.width = '100%';
     loadPercent.innerText = '100%';
 
-    let spellings = {};
-    try {
-        spellings = await rcCheckSpelling(allResults.map(text => ({ text })));
-    } catch (error) {
-        showModal('맞춤법 점검 안내', '문장은 생성했지만 사전 점검을 완료하지 못했어요. 등록된 보완 규칙만 적용합니다.<br>' + escapeHtml(error.message), 'info');
-    }
-
     setTimeout(() => {
         btn.disabled = false;
 
         rawGeneratedText = accumulatedText.trim();
-        renderTable(allResults, spellings);
+        renderTable(allResults);
     }, 500);
 }
 
@@ -472,23 +487,13 @@ function getByteLength(text) {
     return bytes;
 }
 
-// 생성된 문장을 보조 점검 규칙(record-check.js)으로 살펴, 기재할 수 없는 표현·표기·끝맺음 문제를 칠하고 아래에 알려 줌
-function genCheckHtml(text, spellings = {}) {
-    if (typeof rcCheckOne !== 'function') return escapeHtml(text).replace(/\n/g, '<br>');
-    const issues = rcCheckOne({ area: AREA_NAMES[area], text }, { ...RC_DEFAULT_SETTINGS, limits: {}, spellings }, getByteLength)
-        .filter(i => i.type === 'forbid' || i.type === 'spell' || i.type === 'ending');
-    if (!issues.length) return rcHighlight(text, []);
-    const whys = [...new Set(issues.map(i => i.why))].map(w => `<li>${escapeHtml(w)}</li>`).join('');
-    return rcHighlight(text, issues) + `<ul class="gen-warn">${whys}</ul>`;
-}
-
-function renderTable(items, spellings = {}) {
+function renderTable(items) {
     const tbody = document.getElementById('result-tbody');
     tbody.innerHTML = '';
     items.forEach((item, index) => {
         const cleanText = item.trim().replace(/^(?:\d+[\.\)\-]*\s*)+/, '').trim();
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td class="excel-num">${index + 1}</td><td class="result-cell">${genCheckHtml(cleanText, spellings)}</td><td class="excel-byte">${getByteLength(cleanText)} Byte</td>`;
+        tr.innerHTML = `<td class="excel-num">${index + 1}</td><td class="result-cell">${escapeHtml(cleanText).replace(/\n/g, '<br>')}</td><td class="excel-byte">${getByteLength(cleanText)} Byte</td>`;
         tbody.appendChild(tr);
     });
     tbody.insertAdjacentHTML('beforeend', FILLER_ROW); // 표 아래 빈 공간 채우기
