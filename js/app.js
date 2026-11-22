@@ -548,6 +548,9 @@ let guideFromDefault = false; // 서버에 지침이 없어 처음 지침을 보
 let guidePw = null;        // 관리자 비밀번호 (새로고침하면 사라짐)
 let guideEditing = false;
 let guideDrafts = {};      // 수정 중인 글 {key: text}
+let guideResetPending = false;
+const GUIDE_DEFAULT_VERSION = '2.0.0';
+const GUIDE_CUSTOM_VERSION = '2.1.0'; // 기본 지침과 다른 기존 저장본의 버전
 const GUIDE_VAR_LABELS = { '생성 문단 개수': '생성 문장 개수', '최소 글자 수': '최소 글자 수 = 생성 글자 수의 85%' }; // 파란 칸 이름을 화면 이름에 맞춰 보여 줌 (지침 속 이름은 그대로)
 
 function setWorkVisible(show) {
@@ -593,8 +596,8 @@ async function loadGuide() {
 function showGuideKind(kind) {
     if (guideKind === 'check' && kind !== 'check' && rcGuideEditing && !confirm('고친 점검 지침을 저장하지 않고 나갈까요?')) return;
     rcGuideEditing = false;
-    if ((kind === 'settings' || kind === 'check') && guideEditing && Object.keys(changedGuideParts()).length && !confirm('고친 지침을 저장하지 않고 나갈까요?')) return;
-    if (kind === 'settings' || kind === 'check') { guideEditing = false; guideDrafts = {}; }
+    if ((kind === 'settings' || kind === 'check') && guideEditing && (guideResetPending || Object.keys(changedGuideParts()).length) && !confirm('고친 지침을 저장하지 않고 나갈까요?')) return;
+    if (kind === 'settings' || kind === 'check') { guideEditing = false; guideDrafts = {}; guideResetPending = false; }
     guideKind = kind;
     renderGuide();
     if (kind === 'settings' && !settingsData) loadSettings();
@@ -713,16 +716,13 @@ function renderGuide() {
     if (guideKind === 'check') return rcRenderCheckGuide(); // 생활기록부 점검 지침 (record-check-ui.js)
     if (!guideData) return;
 
-    const order = guideData.order[guideKind];
-    const other = guideData.order[guideKind === 'behavior' ? 'general' : 'behavior'];
+    const source = guideResetPending ? GUIDE_DEFAULT : guideData;
+    const order = source.order[guideKind];
+    const other = source.order[guideKind === 'behavior' ? 'general' : 'behavior'];
     const list = document.getElementById('guide-list');
-    list.innerHTML = guideFromDefault
-        ? '<div class="guide-notice">서버에 아직 지침이 없어서 처음 지침을 보여 드려요. [수정] → [저장]을 누르면 서버에 저장되고 문장 생성에 쓰여요.</div>'
-        : Object.entries(GUIDE_DEFAULT.parts).some(([key, part]) => part.body.replace(/\s+/g, ' ').trim() !== (guideData.parts[key]?.body || '').replace(/\s+/g, ' ').trim())
-            ? '<div class="guide-notice">현재 저장된 지침으로 문장을 생성해요. 기본 지침으로 바꾸려면 [수정] → [기본값 불러오기] → [저장]. 기존 수정 내용은 사라져요.</div>'
-            : '';
+    list.innerHTML = '';
     order.forEach((key, idx) => {
-        const part = guideData.parts[key];
+        const part = source.parts[key];
         const text = guideDrafts[key] ?? part.body;
         const tags = other.includes(key) ? '<span class="guide-tag">공통</span>' : '';
         const card = document.createElement('div');
@@ -745,6 +745,16 @@ function renderGuide() {
     });
 }
 
+function guideVersion(guide) {
+    const normalize = text => text.replace(/\s+/g, ' ').trim();
+    const same = Object.keys(guide.parts).length === Object.keys(GUIDE_DEFAULT.parts).length
+        && Object.entries(GUIDE_DEFAULT.parts).every(([key, part]) =>
+            guide.parts[key]?.title === part.title
+            && normalize(guide.parts[key].body) === normalize(part.body))
+        && ['behavior', 'general'].every(kind => JSON.stringify(guide.order[kind]) === JSON.stringify(GUIDE_DEFAULT.order[kind]));
+    return same ? GUIDE_DEFAULT_VERSION : GUIDE_CUSTOM_VERSION;
+}
+
 function renderGuideActions() {
     const box = document.getElementById('guide-actions');
     if (guideKind === 'settings') {
@@ -757,6 +767,10 @@ function renderGuideActions() {
             + '<button type="button" class="guide-btn dark" onclick="saveGuide()">저장</button>';
     } else {
         box.innerHTML = guideData ? '<button type="button" class="guide-btn" onclick="guideEditing=true; guideDrafts={}; renderGuide()">수정</button>' : '';
+    }
+    if (guideData && guideKind !== 'settings' && guideKind !== 'check') {
+        const current = guideFromDefault ? '미저장' : `v${guideVersion(guideData)}`;
+        box.innerHTML = `<span class="guide-version">현재 버전 [${current}] / 기본 버전 [v${GUIDE_DEFAULT_VERSION}]</span>` + box.innerHTML;
     }
 }
 
@@ -787,38 +801,37 @@ async function adminLogin() {
 
 // 수정 중에 guide-default.js의 지침(2026 기재요령 반영)으로 칸을 채움. 저장을 눌러야 서버에 들어감
 function fillDefaultGuide() {
-    let n = 0;
-    for (const [key, part] of Object.entries(guideData.parts)) {
-        const def = GUIDE_DEFAULT.parts[key];
-        if (def && def.body !== (guideDrafts[key] ?? part.body)) { guideDrafts[key] = def.body; n++; }
-    }
+    if (!confirm(`문장 생성 지침을 기본 버전 ${GUIDE_DEFAULT_VERSION}으로 돌리시겠습니까?\n저장하면 기존 수정 내용이 사라집니다.`)) return;
+    guideResetPending = true;
+    guideDrafts = {};
     renderGuide();
-    showModal('', n ? `기본 지침과 다른 칸 ${n}개를 채웠어요.<br>살펴본 뒤 [저장]을 눌러 주세요.` : '이미 기본 지침과 같아요.', 'info');
+    showModal('', `기본 버전 ${GUIDE_DEFAULT_VERSION}을 불러왔어요.<br>[저장]을 누르면 적용돼요.`, 'info');
 }
 
 function changedGuideParts() {
     const changed = {};
     for (const [key, text] of Object.entries(guideDrafts)) {
-        if (text !== guideData.parts[key].body) changed[key] = text;
+        if (text !== (guideResetPending ? GUIDE_DEFAULT : guideData).parts[key].body) changed[key] = text;
     }
     return changed;
 }
 
 function cancelGuideEdit() {
-    if (Object.keys(changedGuideParts()).length && !confirm('고친 내용을 저장하지 않고 나갈까요?')) return;
-    guideEditing = false; guideDrafts = {};
+    if ((guideResetPending || Object.keys(changedGuideParts()).length) && !confirm('고친 내용을 저장하지 않고 나갈까요?')) return;
+    guideEditing = false; guideDrafts = {}; guideResetPending = false;
     renderGuide();
 }
 
 async function saveGuide() {
     const changed = changedGuideParts();
-    if (!Object.keys(changed).length && !guideFromDefault) return showModal('', '바뀐 내용이 없어요.', 'info');
+    if (!Object.keys(changed).length && !guideFromDefault && !guideResetPending) return showModal('', '바뀐 내용이 없어요.', 'info');
+    const source = guideResetPending ? GUIDE_DEFAULT : guideData;
     const parts = {};
-    for (const [key, part] of Object.entries(guideData.parts)) parts[key] = { title: part.title, body: changed[key] ?? part.body };
+    for (const [key, part] of Object.entries(source.parts)) parts[key] = { title: part.title, body: changed[key] ?? part.body };
     try {
-        const res = await gasPost({ action: 'saveGuide', password: guidePw, guide: { parts, order: guideData.order } });
+        const res = await gasPost({ action: 'saveGuide', password: guidePw, guide: { parts, order: source.order } });
         if (!res.success) return showModal('저장 실패', escapeHtml(res.error || '저장하지 못했어요.'), 'error');
-        guideData = res.guide; guideDrafts = {}; guideEditing = false; guideFromDefault = false;
+        guideData = res.guide; guideDrafts = {}; guideEditing = false; guideFromDefault = false; guideResetPending = false;
         renderGuide();
         showModal('', '저장했어요.<br>지금부터 모든 사용자의 문장 생성에 적용돼요.', 'info');
     } catch (err) { guideServerError(err); }
