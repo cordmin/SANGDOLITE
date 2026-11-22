@@ -31,7 +31,7 @@ const use = responses => {
     assert.ok(ctx.getByteLength(result.result) >= 1425 && ctx.getByteLength(result.result) <= 1500);
     assert.equal(requests[0].charLimit, 500, '선택값을 바이트에서 역산해 바꾸지 않음');
     assert.match(requests[0].cases, /문단 하나당 공백 포함 500자/);
-    assert.match(requests[0].cases, /475~500자/);
+    assert.match(requests[0].cases, /아래 작성 규칙의 분량 기준/);
     assert.equal(payload.cases, '정·부반장 선거', '사용자 원본을 변경하지 않음');
 
     // 모든 선택지에서 화면 선택값 → 요청 → 서버 조립 지침까지 글자 수를 동일하게 유지.
@@ -49,7 +49,7 @@ const use = responses => {
         const prompt = server.buildPrompt(requests[0]);
         assert.match(prompt, new RegExp('공백 포함 ' + count + '자를 넘지'));
         assert.match(prompt, new RegExp('문단 하나당 공백 포함 ' + count + '자'));
-        assert.match(prompt, new RegExp(Math.ceil(count * .95) + '~' + count + '자'));
+        assert.ok(!/95%|95~100|238~250|475~500/.test(requests[0].cases), '클라이언트가 별도의 분량 범위를 만들지 않음');
         assert.ok(!/313자|625자|2\.4|각 활동에 약 \d+byte/.test(prompt));
     }
 

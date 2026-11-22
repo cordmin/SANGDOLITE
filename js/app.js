@@ -279,9 +279,8 @@ async function sendGenerationRequest(body) {
 
 async function requestGeneration(payload) {
     const targetChars = payload.charLimit;
-    const minimumChars = Math.ceil(targetChars * .95);
     const activities = payload.activities || [];
-    const conditions = `사용자가 선택한 목표는 문단 하나당 공백 포함 ${targetChars}자임. 바이트 수가 아니라 글자 수를 기준으로 작성할 것. 여러 문단의 합계가 아닌 각 문단을 ${minimumChars}~${targetChars}자에 가깝게 충분히 작성할 것. 목표 분량의 절반 정도로 짧게 끝내지 말 것. 입력 내용에 관련된 행동·참여 태도·배운 점을 자연스럽게 풀어 쓰되 무관한 활동이나 장황한 이야기를 추가하거나 같은 내용을 반복하지 말 것. 출력 전에 각 문단이 목표 분량에 가깝게 작성되었는지 확인할 것.`
+    const conditions = `사용자가 선택한 목표는 문단 하나당 공백 포함 ${targetChars}자임. 바이트 수가 아니라 글자 수이며, 여러 문단의 합계가 아니라 각 문단의 목표임. 아래 작성 규칙의 분량 기준에 따라 이 목표에 가깝게 작성할 것. 입력 내용에 관련된 행동·참여 태도·배운 점을 자연스럽게 풀어 쓰되 무관한 활동이나 장황한 이야기를 추가하거나 같은 내용을 반복하지 말 것.`
         + (activities.length ? ` 선택한 활동명 ${activities.map(name => JSON.stringify(name)).join(', ')}을 빠짐없이 원래 표기대로 담을 것. 활동명의 가운뎃점은 유지할 것. 각 활동에 비슷한 분량을 배분하되 문단 전체가 목표 글자 수에 가깝도록 작성할 것.` : '');
     const body = { ...payload,
         cases: `${payload.cases}\n\n[아래는 활동 내용이 아닌 이번 생성의 작성 조건]\n${conditions}` };
