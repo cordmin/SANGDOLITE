@@ -76,6 +76,16 @@ const use = responses => {
     assert.equal(requests.length, 1);
     assert.match(requests[0].cases, /빠짐없이 원래 표기대로/);
 
+    use([{ success: true, result: good }]);
+    await ctx.requestGeneration({ ...payload, area: '진로', activities: ['직업인초청강연', '진로심리검사'], cases: '직업인초청강연, 진로심리검사' });
+    assert.equal(requests.length, 1);
+    const careerPrompt = server.buildPrompt(requests[0]);
+    assert.match(careerPrompt, /각 활동을 다루는 첫 문장은 반드시 해당 활동명으로 시작/);
+    assert.match(careerPrompt, /활동명 앞에 목적·배경·수식어를 붙이지 말 것/);
+    assert.match(careerPrompt, /문단의 첫 문장뿐 아니라 다른 활동으로 바뀌는 문장에도 동일하게/);
+    assert.match(careerPrompt, /'이어서'.*같은 연결어를 붙이지 말 것/);
+    assert.match(careerPrompt, /직업인초청강연에 참여하여 …함\. 진로심리검사에 참여하여 …함\./);
+
     // 생성 표에서는 점검·하이라이트를 호출하지 않고 원문을 안전하게 표시.
     let row;
     const table = { innerHTML: '', appendChild(value) { row = value; }, insertAdjacentHTML() {} };

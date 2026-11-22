@@ -281,7 +281,7 @@ async function requestGeneration(payload) {
     const targetChars = payload.charLimit;
     const activities = payload.activities || [];
     const conditions = `사용자가 선택한 목표는 문단 하나당 공백 포함 ${targetChars}자임. 바이트 수가 아니라 글자 수이며, 여러 문단의 합계가 아니라 각 문단의 목표임. 아래 작성 규칙의 분량 기준에 따라 이 목표에 가깝게 작성할 것. 입력 내용에 관련된 행동·참여 태도·배운 점을 자연스럽게 풀어 쓰되 무관한 활동이나 장황한 이야기를 추가하거나 같은 내용을 반복하지 말 것.`
-        + (activities.length ? ` 선택한 활동명 ${activities.map(name => JSON.stringify(name)).join(', ')}을 빠짐없이 원래 표기대로 담을 것. 활동명의 가운뎃점은 유지할 것. 각 활동에 비슷한 분량을 배분하되 문단 전체가 목표 글자 수에 가깝도록 작성할 것.` : '');
+        + (activities.length ? ` 선택한 활동명 ${activities.map(name => JSON.stringify(name)).join(', ')}을 빠짐없이 원래 표기대로 담을 것. 활동명의 가운뎃점은 유지할 것. 각 활동을 다루는 첫 문장은 반드시 해당 활동명으로 시작할 것. 활동명 앞에 목적·배경·수식어를 붙이지 말 것. 문단의 첫 문장뿐 아니라 다른 활동으로 바뀌는 문장에도 동일하게 적용할 것. 서로 다른 활동은 별도의 문장으로 작성하고, 활동 사이에 '이어서', '이후', '그리고', '또한', '이와 함께' 같은 연결어를 붙이지 말 것. 문장의 시작 형식은 ${activities.map(name => `${name}에 참여하여 …함.`).join(' ')}처럼 활동명부터 시작할 것(형식만 참고하고 내용은 입력에 맞게 작성). 각 활동에 비슷한 분량을 배분하되 문단 전체가 목표 글자 수에 가깝도록 작성할 것.` : '');
     const body = { ...payload,
         cases: `${payload.cases}\n\n[아래는 활동 내용이 아닌 이번 생성의 작성 조건]\n${conditions}` };
     const res = await sendGenerationRequest(body);
@@ -602,7 +602,7 @@ let guideEditing = false;
 let guideDrafts = {};      // 수정 중인 글 {key: text}
 let guideResetPending = false;
 const GUIDE_DEFAULT_VERSION = '2.1.0';
-const GUIDE_CURRENT_VERSION = '2.1.1'; // 기본 저장 지침 + 현재 추가 요청 규칙의 버전
+const GUIDE_CURRENT_VERSION = '2.1.2'; // 기본 저장 지침 + 현재 추가 요청 규칙의 버전
 const GUIDE_VAR_LABELS = { '생성 문단 개수': '생성 문장 개수', '최소 글자 수': '최소 글자 수 = 생성 글자 수의 85%' }; // 파란 칸 이름을 화면 이름에 맞춰 보여 줌 (지침 속 이름은 그대로)
 
 function setWorkVisible(show) {
