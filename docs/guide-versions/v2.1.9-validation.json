@@ -1,0 +1,305 @@
+{
+    "version": "2.1.9",
+    "date": "2026-11-23",
+    "syntheticInputs": true,
+    "request": {
+        "charLimit": 500,
+        "sentenceCount": 5
+    },
+    "sets": {
+        "자율5": "정·부반장 선거, 흡연예방교육, 학교폭력예방교육, 다문화이해교육, 장애인식개선교육",
+        "진로5": "진로체험의날, 직업인과의만남, 나의 꿈 발표, 진로심리검사, 현장직업체험",
+        "진로8": "진로심리검사, 진로적성검사, 직업인초청강연, 직업인과의만남, 진로융합체험, 현장직업체험, 진로체험의날, 나의 꿈 발표"
+    },
+    "metricNotes": {
+        "fixedFourShare": "같은 활동의 뒤 문장(활동명으로 시작하지 않는 문장) 중 이 과정에서·이를 통해·이를 바탕으로·특히로 시작한 비율",
+        "wordBeforeActivity": "활동명이 처음 나오는 문장이 활동명으로 시작하지 않은 수",
+        "changedOrMissingName": "문단에 입력 활동명이 그대로 없는 수"
+    },
+    "gemini": {
+        "model": "서버 기본 모델(gemini-flash-lite-latest), 서버 저장 지침을 잠시 후보로 바꿔 생성 후 v2.1.8로 복원",
+        "v2.1.8": {
+            "자율5": {
+                "paragraphs": 20,
+                "avgChars": 518,
+                "minChars": 445,
+                "maxChars": 630,
+                "wordBeforeActivity": 0,
+                "changedOrMissingName": 0,
+                "closingSummary": 0,
+                "continuationSentences": 99,
+                "fixedFourShare": 0.87,
+                "starters": {
+                    "이를 통해": 30,
+                    "이를 바탕으로": 17,
+                    "이를 계기로": 1,
+                    "이 과정에서": 32,
+                    "(연결어 없음)": 8,
+                    "특히": 7,
+                    "이와 함께": 3,
+                    "이와 더불어": 1
+                }
+            },
+            "진로5": {
+                "paragraphs": 20,
+                "avgChars": 575,
+                "minChars": 492,
+                "maxChars": 677,
+                "wordBeforeActivity": 0,
+                "changedOrMissingName": 0,
+                "closingSummary": 0,
+                "continuationSentences": 100,
+                "fixedFourShare": 0.32,
+                "starters": {
+                    "이 과정에서": 17,
+                    "특히": 6,
+                    "(연결어 없음)": 66,
+                    "이를 통해": 8,
+                    "이를 바탕으로": 1,
+                    "이러한": 1,
+                    "이와 함께": 1
+                }
+            },
+            "진로8": {
+                "paragraphs": 60,
+                "avgChars": 692,
+                "minChars": 501,
+                "maxChars": 855,
+                "wordBeforeActivity": 4,
+                "changedOrMissingName": 0,
+                "closingSummary": 0,
+                "continuationSentences": 402,
+                "fixedFourShare": 0.7,
+                "starters": {
+                    "이 과정에서": 126,
+                    "이를 통해": 91,
+                    "특히": 21,
+                    "이를 바탕으로": 42,
+                    "(연결어 없음)": 116,
+                    "이와 함께": 2,
+                    "이를 계기로": 1,
+                    "이어서": 2,
+                    "이러한": 1
+                }
+            }
+        },
+        "v2.1.9": {
+            "자율5": {
+                "paragraphs": 40,
+                "avgChars": 505,
+                "minChars": 287,
+                "maxChars": 674,
+                "wordBeforeActivity": 0,
+                "changedOrMissingName": 0,
+                "closingSummary": 0,
+                "continuationSentences": 170,
+                "fixedFourShare": 0.27,
+                "starters": {
+                    "(연결어 없음)": 96,
+                    "특히": 34,
+                    "아울러": 17,
+                    "이 과정에서": 10,
+                    "또한": 5,
+                    "이와 함께": 6,
+                    "이를 통해": 1,
+                    "이를 바탕으로": 1
+                }
+            },
+            "진로5": {
+                "paragraphs": 20,
+                "avgChars": 546,
+                "minChars": 474,
+                "maxChars": 598,
+                "wordBeforeActivity": 0,
+                "changedOrMissingName": 1,
+                "closingSummary": 0,
+                "continuationSentences": 101,
+                "fixedFourShare": 0.05,
+                "starters": {
+                    "이 과정에서": 1,
+                    "(연결어 없음)": 96,
+                    "특히": 4
+                }
+            },
+            "진로8": {
+                "paragraphs": 40,
+                "avgChars": 618,
+                "minChars": 480,
+                "maxChars": 880,
+                "wordBeforeActivity": 1,
+                "changedOrMissingName": 11,
+                "closingSummary": 0,
+                "continuationSentences": 136,
+                "fixedFourShare": 0.21,
+                "starters": {
+                    "(연결어 없음)": 100,
+                    "특히": 21,
+                    "이를 통해": 5,
+                    "이 과정에서": 2,
+                    "나아가": 1,
+                    "이와 함께": 1,
+                    "또한": 6
+                }
+            }
+        },
+        "후보B(채택 안 함)": {
+            "note": "활동명 규칙 옆에 또한·나아가를 직접 언급한 안",
+            "자율5": {
+                "paragraphs": 40,
+                "avgChars": 469,
+                "minChars": 337,
+                "maxChars": 527,
+                "wordBeforeActivity": 0,
+                "changedOrMissingName": 0,
+                "closingSummary": 0,
+                "continuationSentences": 160,
+                "fixedFourShare": 0.39,
+                "starters": {
+                    "특히": 39,
+                    "아울러": 15,
+                    "또한": 4,
+                    "나아가": 11,
+                    "이 과정에서": 21,
+                    "(연결어 없음)": 66,
+                    "이와 함께": 2,
+                    "이를 통해": 2
+                }
+            },
+            "진로5": {
+                "paragraphs": 20,
+                "avgChars": 530,
+                "minChars": 434,
+                "maxChars": 620,
+                "wordBeforeActivity": 0,
+                "changedOrMissingName": 0,
+                "closingSummary": 0,
+                "continuationSentences": 100,
+                "fixedFourShare": 0.18,
+                "starters": {
+                    "특히": 12,
+                    "이 과정에서": 5,
+                    "아울러": 5,
+                    "이를 통해": 1,
+                    "또한": 4,
+                    "나아가": 1,
+                    "(연결어 없음)": 72
+                }
+            },
+            "진로8": {
+                "paragraphs": 40,
+                "avgChars": 625,
+                "minChars": 418,
+                "maxChars": 872,
+                "wordBeforeActivity": 26,
+                "changedOrMissingName": 0,
+                "closingSummary": 0,
+                "continuationSentences": 175,
+                "fixedFourShare": 0.31,
+                "starters": {
+                    "특히": 39,
+                    "(연결어 없음)": 70,
+                    "또한": 23,
+                    "이와 함께": 11,
+                    "아울러": 15,
+                    "이어서": 1,
+                    "이 과정에서": 14,
+                    "이를 통해": 1,
+                    "나아가": 1
+                }
+            }
+        }
+    },
+    "claude": {
+        "model": "claude-opus-5-5 (같은 프롬프트를 받은 별도 실행)",
+        "v2.1.8": {
+            "자율5": {
+                "paragraphs": 5,
+                "avgChars": 556,
+                "minChars": 546,
+                "maxChars": 570,
+                "wordBeforeActivity": 0,
+                "changedOrMissingName": 0,
+                "closingSummary": 0,
+                "continuationSentences": 25,
+                "fixedFourShare": 1,
+                "starters": {
+                    "이 과정에서": 10,
+                    "이를 통해": 6,
+                    "특히": 5,
+                    "이를 바탕으로": 4
+                }
+            },
+            "진로8": {
+                "paragraphs": 5,
+                "avgChars": 532,
+                "minChars": 509,
+                "maxChars": 557,
+                "wordBeforeActivity": 0,
+                "changedOrMissingName": 0,
+                "closingSummary": 0,
+                "continuationSentences": 9,
+                "fixedFourShare": 1,
+                "starters": {
+                    "이 과정에서": 4,
+                    "이를 통해": 3,
+                    "특히": 2
+                }
+            }
+        },
+        "v2.1.9": {
+            "자율5": {
+                "paragraphs": 5,
+                "avgChars": 550,
+                "minChars": 538,
+                "maxChars": 559,
+                "wordBeforeActivity": 0,
+                "changedOrMissingName": 0,
+                "closingSummary": 0,
+                "continuationSentences": 25,
+                "fixedFourShare": 0.48,
+                "starters": {
+                    "또한": 4,
+                    "특히": 5,
+                    "이 과정에서": 4,
+                    "아울러": 3,
+                    "이를 통해": 3,
+                    "나아가": 3,
+                    "이와 함께": 2,
+                    "그 결과": 1
+                }
+            },
+            "진로8": {
+                "paragraphs": 5,
+                "avgChars": 487,
+                "minChars": 470,
+                "maxChars": 509,
+                "wordBeforeActivity": 0,
+                "changedOrMissingName": 0,
+                "closingSummary": 0,
+                "continuationSentences": 10,
+                "fixedFourShare": 0.4,
+                "starters": {
+                    "특히": 2,
+                    "또한": 1,
+                    "이 과정에서": 1,
+                    "아울러": 1,
+                    "그 결과": 1,
+                    "나아가": 1,
+                    "이를 통해": 1,
+                    "이와 함께": 1,
+                    "(연결어 없음)": 1
+                }
+            }
+        }
+    },
+    "limitations": [
+        "제미나이 v2.1.9 진로8 8회 요청 중 2회에서 진로체험의날을 진로체험의 날로 띄어 씀(v2.1.8은 12회 중 0회). 요청 단위로 몰리며 표본이 적어 원인 판단 보류, 지켜볼 항목.",
+        "제미나이 v2.1.9 진로8에서 나아가+활동명 시작 1건(40문단). v2.1.8은 60문단 중 4건(이어서·이를 바탕으로 등).",
+        "제미나이 v2.1.9 자율5 8회 중 1회는 문단이 약 300자로 짧음.",
+        "서버 모델 별칭이 3.5 Flash-Lite와 같은지 확인하지 못함."
+    ],
+    "samples": {
+        "gemini v2.1.9 자율5": "1. 정·부반장 선거 과정에서 학급 구성원들의 다양한 의견을 경청하며 민주적인 절차의 중요성을 깊이 인식함. 후보자들의 공약을 꼼꼼히 비교하고 학급 발전에 가장 적합한 대표를 선출하기 위해 신중하게 투표에 참여함. 흡연예방교육 시간에 흡연이 신체에 미치는 유해성과 중독의 위험성을 다룬 시청각 자료를 주의 깊게 분석함. 흡연의 위험성을 깨닫고 주변 사람들에게도 금연의 필요성을 적극적으로 알리며 건강한 생활 습관을 다짐함. 학교폭력예방교육에 성실히 임하며 언어폭력과 사이버불링의 심각성을 사례 중심으로 파악함. 친구 간의 존중과 배려가 학교폭력을 예방하는 근본적인 해결책임을 이해하고 평화로운 학급 문화를 만들기 위한 대화 방식을 익힘. 다문화이해교육을 통해 서로 다른 문화적 배경을 가진 사람들을 편견 없이 대하는 태도의 중요성을 깨달음. 문화의 다양성을 존중하고 다문화 사회를 살아가는 민주시민으로서 갖추어야 할 포용력을 기르기 위해 노력함. 장애인식개선교육에 집중하여 장애에 대한 잘못된 편견을 바로잡고 일상에서 실천할 수 있는 올바른 예절을 배움. 장애를 가진 친구들과 소통할 때 필요한 태도를 고민하며 모두가 함께 어울리는 포용적인 공동체를 만들기 위해 깊이 성찰함.",
+        "claude v2.1.9 자율5": "1. 정·부반장 선거에서 후보자들의 공약을 꼼꼼히 비교하며 학급에 필요한 일이 무엇인지 친구들과 의견을 나눔. 또한 투표 과정의 공정함을 지키기 위해 질서 있게 참여하며 민주적인 선거 절차의 의미를 이해함. 흡연예방교육에 참여하여 흡연이 몸과 마음에 미치는 해로운 영향을 구체적으로 알게 됨. 특히 흡연을 권유받는 상황에서 단호하게 거절하는 방법을 익히며 건강한 생활 습관의 중요성을 깨달음. 학교폭력예방교육을 통해 장난처럼 여기던 말과 행동도 상대에게 상처가 될 수 있음을 이해함. 이 과정에서 방관하지 않고 도움을 요청하는 것이 친구를 지키는 용기라는 점을 자신의 말로 정리함. 다문화이해교육에서 여러 나라의 생활 방식과 문화를 살펴보며 서로 다름을 존중하는 태도를 기름. 아울러 일상에서 무심코 쓰던 편견 섞인 표현을 돌아보고 바르게 고쳐 쓰려는 모습을 보임. 장애인식개선교육에 참여하여 장애를 가진 사람이 일상에서 겪는 불편함을 상대의 입장에서 생각해 봄. 이를 통해 배려가 동정이 아닌 함께 살아가기 위한 존중임을 깨닫고 생활 속에서 실천하려는 다짐을 밝힘."
+    }
+}

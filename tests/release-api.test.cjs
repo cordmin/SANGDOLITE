@@ -36,8 +36,8 @@ test('Personal API release: standalone assets, prompts and direct Gemini respons
     assert.match(prompt, /활동명이 문장의 맨 첫 낱말이 되게 쓸 것/);
     assert.match(prompt, /글자 수 설명을 절대 붙이지 말 것/);
     const version = vm.runInContext('GUIDE_VERSION', ctx);
-    assert.equal(version, '2.1.8');
-    const snapshot = JSON.parse(fs.readFileSync(path.join(root, 'docs/guide-versions/v2.1.8.json'), 'utf8'));
+    assert.equal(version, '2.1.9');
+    const snapshot = JSON.parse(fs.readFileSync(path.join(root, 'docs/guide-versions/v2.1.9.json'), 'utf8'));
     assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(GUIDE_DEFAULT)', ctx)), snapshot.guide);
     assert.match(prompt, /입력 속 \{생성 글자 수\}/);
     assert.match(ctx.buildPrompt({ ...data, area: '자율' }), /자율·자치활동/);

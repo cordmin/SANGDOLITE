@@ -53,7 +53,8 @@ assert.match(ctx.buildPrompt({ area: '동아리', charLimit: 100, sentenceCount:
 
 // 빈칸이 실제 값으로 채워지고, 입력 속 {생성 글자 수}는 바뀌지 않음
 const built = ctx.buildPrompt({ area: '행동특성', charLimit: 250, sentenceCount: 5, cases: '{생성 글자 수}' });
-assert.match(built, /250자를 넘지 않되 213자 이상/);
+assert.match(built, /250자에 가깝게/);
+assert.match(built, /213자 이상을 기준으로/);
 assert.match(built, /문단 5개/);
 assert.match(built, /\{생성 글자 수\}/);
 // AI에게는 기재요령 영역 이름으로 넘어감
