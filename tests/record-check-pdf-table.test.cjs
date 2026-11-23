@@ -6,9 +6,10 @@ const vm = require('node:vm');
 
 const ctx = vm.createContext({});
 vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', 'record-check.js'), 'utf8'), ctx);
-const { rcGroupLines, rcPdfTable, rcParseRows, rcParsePdfLines } = ctx;
+const { rcGroupLines, rcPdfTable, rcParseRows, rcParsePdfLines, rcResolveWraps } = ctx;
 const w = (s, x, y, spAfter = null) => ({ s, x, y, w: s.length * 10, h: 10, sp: false, spAfter });
-const brief = recs => [...recs].map(r => [r.grade, r.cls, r.num, r.name, r.area, r.text].join('|'));
+// 앱처럼 줄바꿈 자리 표시를 정리함 (사전 없이 끝말 짐작)
+const brief = recs => [...rcResolveWraps([...recs], null)].map(r => [r.grade, r.cls, r.num, r.name, r.area, r.text].join('|'));
 
 // 세특: 번호는 학생 칸의 세로 가운데, 학생 사이는 줄 간격이 넓음, 다음 쪽은 앞 학생이 이어짐
 const setuk = [
@@ -70,7 +71,7 @@ assert.equal(txt[0].text, '책임감이 강하고 꼼꼼하게 일을 처리함.
         ...L(677, ['학생', 200]), ...L(664, ['글', 200]), ...L(651, ['임.', 200]),
     ]);
     page.rects = [{ x0: 5, x1: 50, y0: 700, y1: 762 }, { x0: 5, x1: 50, y0: 640, y1: 700 }, { x0: 190, x1: 400, y0: 640, y1: 762 }];
-    const recs = [...rcParseRows(rcPdfTable([page]), '', '행특.pdf')];
+    const recs = [...rcResolveWraps([...rcParseRows(rcPdfTable([page]), '', '행특.pdf')], null)];
     assert.deepEqual(recs.map(r => [r.num, r.name, r.grade, r.text.replace(/s/g, '')].join('|')), ['1|김하나|1|가나다라마바사아자차카타파하.', '2|이두리|1|둘째학생글임.']);
 }
 console.log('PDF table parse passed');

@@ -22,6 +22,17 @@ assert.equal(replies[1].id, 2);
 assert.deepEqual(replies[1].spellings['깜빡햇다'], replies[0].spellings['깜빡햇다']);
 
 const require = createRequire(import.meta.url);
+// PDF 줄바꿈 자리: 사전에 그대로 있는 낱말만 돌려주고(나눠 맞추지 않음), 그걸로 붙일지 띄울지 정함
+await self.onmessage({ data: { id: 3, words: ['설명하는', '생각과', '기억이', '생각과기억이'], exact: true } });
+const wrapKnown = new Set(replies.pop().known);
+assert.ok(wrapKnown.has('설명하는') && wrapKnown.has('생각과') && wrapKnown.has('기억이') && !wrapKnown.has('생각과기억이'));
+{
+    const { rcResolveWraps } = require('../js/record-check.js');
+    const text = '활동에서 설⁤명하는 글을 씀. 생각과⁤기억이 채워짐. 인성관⁣을 탐구함.';
+    assert.equal(rcResolveWraps([{ text }], wrapKnown)[0].text, '활동에서 설명하는 글을 씀. 생각과 기억이 채워짐. 인성관을 탐구함.');
+    assert.equal(rcResolveWraps([{ text }], null)[0].text, '활동에서 설명하는 글을 씀. 생각과기억이 채워짐. 인성관 을 탐구함.', '사전 없으면 짐작대로');
+}
+
 const { rcCheckAll, rcHighlight, RC_DEFAULT_SETTINGS } = require('../js/record-check.js');
 const settings = { ...RC_DEFAULT_SETTINGS, spellings: replies[0].spellings };
 const records = [{ name: '검증용', area: '진로활동', subject: '', text: '학교 활동에 참여함. 준비물을 깜빡햇다.' }];
