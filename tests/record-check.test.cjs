@@ -46,7 +46,9 @@ const types = i => res[i].issues.map(x => x.type);
 assert.ok(types(0).includes('forbid'), '공인어학시험');
 assert.ok(types(0).includes('ending'), '마침표 빠짐');
 assert.ok(types(1).includes('spell'), '몇일 → 며칠');
-assert.equal(types(2).join(), 'empty');
+assert.equal(types(2).join(), '', '빈 세특은 오류 아님');
+assert.equal(rcCheckAll([{ area: '개인별 세부능력 및 특기사항', subject: '', text: ' ' }], S, getByteLength)[0].issues.length, 0, '빈 개인별 세특은 오류 아님');
+assert.equal(rcCheckAll([{ area: '진로활동', subject: '', text: '' }], S, getByteLength)[0].issues[0].type, 'empty', '다른 영역은 빈 칸 검출 유지');
 
 // '~다.' 끝맺음, 글자 수 넘침 (반복 표현은 점검하지 않음)
 const one = rcCheckAll([{ area: '행동특성 및 종합의견', subject: '', name: '가', text: '성실한 태도로 성실하게 참여함. 성실함이 돋보였다.' }],
