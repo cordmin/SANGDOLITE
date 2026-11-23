@@ -69,4 +69,16 @@ const badSuggestions = { 장애인식개선교육: [], 학교폭력예방교육�
 assert.equal(rcCheckAll([{ ...records[0], text: normal }], { ...RC_DEFAULT_SETTINGS, spellings: badSuggestions }, text => Buffer.byteLength(text))[0].issues.filter(issue => issue.type === 'spell').length, 0);
 const known = rcCheckAll([{ ...records[0], text: '역활을 맡음. 설겆이를 함.' }], { ...RC_DEFAULT_SETTINGS, spellings: replies[2].spellings }, text => Buffer.byteLength(text));
 assert.ok(known[0].issues.some(issue => issue.type === 'spell' && issue.what === '역활을'));
+assert.ok(!known[0].marks.includes('역활을'), '고칠 점으로 잡힌 말은 밑줄로 또 긋지 않음');
+
+// 사전이 모르는 낱말은 고칠 점·문구 없이 밑줄만 (낱말 중간에는 안 그음)
+const typo = '학고 구칙을 준수할 것으로 기대됌. 과학고등학교에 감.';
+await self.onmessage({ data: { id: 5, words: ['학고', '구칙을', '준수할', '것으로', '기대됌', '과학고등학교에', '감'] } });
+const typoResult = rcCheckAll([{ ...records[0], text: typo }], { ...RC_DEFAULT_SETTINGS, spellings: replies.pop().spellings }, text => Buffer.byteLength(text))[0];
+assert.ok(!typoResult.issues.some(issue => issue.type === 'spell'));
+for (const word of ['학고', '구칙을', '기대됌']) assert.ok(typoResult.marks.includes(word), word);
+const typoHtml = rcHighlight(typo, typoResult.issues, typoResult.marks);
+assert.match(typoHtml, /<mark class="rc-mark rc-dict">학고<\/mark> <mark class="rc-mark rc-dict">구칙을<\/mark>/);
+assert.match(typoHtml, /과학고등학교/);
+assert.ok(!rcCheckAll([{ ...records[0], text: typo }], { ...RC_DEFAULT_SETTINGS, off: ['spell'], spellings: { 학고: [] } }, text => text.length)[0].marks.length, '맞춤법 점검을 끄면 밑줄도 없음');
 console.log('Offline Hunspell dictionary and record integration passed');
