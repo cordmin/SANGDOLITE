@@ -5,7 +5,7 @@ const vm = require('node:vm');
 const { test } = require('node:test');
 
 const root = path.join(__dirname, '..');
-const release = path.join(root, '생활기록부도우미LITE(배포용)');
+const release = path.join(root, '생활기록부도우미LITE(작업소스)');
 
 test('Personal API release: standalone assets, prompts and direct Gemini responses', { skip: !fs.existsSync(release) }, async () => {
     const store = {};
