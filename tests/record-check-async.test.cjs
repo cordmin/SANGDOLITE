@@ -16,7 +16,7 @@ const context = vm.createContext({
     rcCheckAll: (records, settings) => settings.spellings,
     rcCheckSpelling: () => new Promise((resolve, reject) => pending.push({ resolve, reject })),
 });
-for (const pattern of [/async function rcRun\(\) \{[\s\S]*?\n\}/, /function rcRemoveFile\(i\) \{[\s\S]*?\n\}/, /function rcLoading\(text, sub = ''\) \{[\s\S]*?\n\}/, /function showToast\(text, type = ''\) \{[\s\S]*?\n\}/]) {
+for (const pattern of [/async function rcRun\([^)]*\) \{[\s\S]*?\n\}/, /function rcRemoveFile\(i\) \{[\s\S]*?\n\}/, /function rcLoading\([^)]*\) \{[\s\S]*?\n\}/, /function showToast\(text, type = ''\) \{[\s\S]*?\n\}/]) {
     vm.runInContext(source.match(pattern)[0], context);
 }
 
