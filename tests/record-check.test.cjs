@@ -298,3 +298,13 @@ console.log('Similar ignores bare numbering passed');
     ]);
 }
 console.log('NEIS excel layout passed');
+
+// 나이스 동아리 머리말: '방과후학교스포츠클럽'은 방과후학교 수강이 아님, 같은 동아리 머리말은 똑같은 문장이 아님, 머리말엔 마침표 없음
+{
+    const club = (name, body) => ({ name, num: name === '가' ? '1' : '2', area: '동아리활동', subject: '',
+        text: `(과학반)(34시간) ${body}\n(오아시스반대항토너먼트(1-1) : 방과후학교스포츠클럽)(1시간)\n(애니연구 : 자율동아리)` });
+    const res = rcCheckAll([club('가', '실험 보고서를 꼼꼼히 씀.'), club('나', '현미경을 바르게 다룸.')], S, getByteLength);
+    assert.deepEqual(res.flatMap(r => r.issues.map(i => i.type + ':' + i.what)), [], '머리말만 같으면 점검 결과 없음');
+    assert.ok(iss('동아리활동', '방과후학교 컴퓨터반을 수강함.').some(x => x.what === '방과후학교' && x.level === 'no'), '방과후학교 수강은 그대로 기재 불가');
+}
+console.log('NEIS club headers passed');

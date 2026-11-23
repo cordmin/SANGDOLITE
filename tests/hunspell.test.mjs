@@ -28,7 +28,11 @@ const wrapKnown = new Set(replies.pop().known);
 assert.ok(wrapKnown.has('설명하는') && wrapKnown.has('생각과') && wrapKnown.has('기억이') && !wrapKnown.has('생각과기억이'));
 {
     const { rcResolveWraps } = require('../js/record-check.js');
-    const text = '활동에서 설⁤명하는 글을 씀. 생각과⁤기억이 채워짐. 인성관⁣을 탐구함.';
+    const text = '활동에서 설\u2064명하는 글을 씀. 생각과\u2064기억이 채워짐. 인성관\u2063을 탐구함.';
+    // 줄 끝에 한 글자만 남은 자리('활|동지에')는 붙이고, 혼자 쓰는 한 글자('네|컷')는 띄움
+    await self.onmessage({ data: { id: 4, words: ['활', '동지에', '활동지에', '네', '컷', '네컷'], exact: true } });
+    const oneKnown = new Set(replies.pop().known);
+    assert.equal(rcResolveWraps([{ text: '활\u2064동지에 정리함. 네\u2064컷 만화를 그림.' }], oneKnown)[0].text, '활동지에 정리함. 네 컷 만화를 그림.');
     assert.equal(rcResolveWraps([{ text }], wrapKnown)[0].text, '활동에서 설명하는 글을 씀. 생각과 기억이 채워짐. 인성관을 탐구함.');
     assert.equal(rcResolveWraps([{ text }], null)[0].text, '활동에서 설명하는 글을 씀. 생각과기억이 채워짐. 인성관 을 탐구함.', '사전 없으면 짐작대로');
 }

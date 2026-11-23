@@ -49,7 +49,7 @@ for (const pattern of [/async function rcRun\(\) \{[\s\S]*?\n\}/, /function rcRe
     assert.equal(context.rcResults, null);
     assert.equal(elements['rc-loading'].hidden, true);
 
-    // 파일은 하나만: 이미 있으면 새 파일을 받지 않고, 여러 개를 고르면 첫 파일만 불러옴
+    // 파일은 하나만: 여러 개를 고르면 첫 파일만, 이미 있으면 새 파일로 바꿈 (새 파일을 못 읽으면 그대로)
     vm.runInContext(source.match(/async function rcAddFiles\(list\) \{[\s\S]*?\n\}/)[0], context);
     vm.runInContext(source.match(/function rcFixRange\(ws\) \{[\s\S]*?\n\}/)[0], context);
     Object.assign(context, {
@@ -62,7 +62,11 @@ for (const pattern of [/async function rcRun\(\) \{[\s\S]*?\n\}/, /function rcRe
     assert.equal(context.rcFiles.map(f => f.name).join(), '3반.xlsx', elements['toast'].textContent);
     assert.match(elements['toast'].textContent, /하나만/);
     await context.rcAddFiles([file('5반.xlsx')]);
-    assert.equal(context.rcFiles.map(f => f.name).join(), '3반.xlsx', '이미 불러온 파일이 있으면 새 파일을 받지 않음');
-    assert.match(elements['toast'].textContent, /닫은 뒤/);
+    assert.equal(context.rcFiles.map(f => f.name).join(), '5반.xlsx', '이미 불러온 파일이 있으면 새 파일로 바꿈');
+    assert.match(elements['toast'].textContent, /바꿔 불러왔어요/);
+    context.rcParseRows = () => [];
+    context.rcLoadFail = () => {};
+    await context.rcAddFiles([file('빈파일.xlsx')]);
+    assert.equal(context.rcFiles.map(f => f.name).join(), '5반.xlsx', '새 파일을 못 읽으면 지금 파일 그대로');
     console.log('Async record checks, failure handling and stale results passed');
 })().catch(error => { console.error(error); process.exitCode = 1; });
