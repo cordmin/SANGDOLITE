@@ -103,4 +103,11 @@ assert.deepEqual(Object.keys(replies.pop().spellings).sort(), ['학고', '구칙
         .issues.filter(issue => issue.type === 'spell').map(issue => issue.what).sort();
     assert.deepEqual(found, ['구지', '됬'].sort());
 }
+// '~적', 앞에 붙는 말, 조사 둘, 아는 말 두 개 붙임은 통과. 오타·외래어끼리 붙인 말은 계속 밑줄
+{
+    const good = ['조형적으로', '비언어적', '다항식에서도', '하나씩', '미제출된', '과의존', '원반형', '활동지', '냉난방기', '속씨식물문'];
+    const bad = ['우수하함', '방벙으로', '분야게', '모습으', '꼼꼼이', '개구장이', '삭월세', '게이트키퍼의', '플라잉디스크를', '스포츠트레이너라는'];
+    await self.onmessage({ data: { id: 8, words: [...good, ...bad] } });
+    assert.deepEqual(Object.keys(replies.pop().spellings).sort(), [...bad].sort());
+}
 console.log('Offline Hunspell dictionary and record integration passed');
