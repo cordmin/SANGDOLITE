@@ -78,6 +78,12 @@ await self.onmessage({ data: { id: 5, words: ['학고', '구칙을', '준수할'
 const typoResult = rcCheckAll([{ ...records[0], text: typo }], { ...RC_DEFAULT_SETTINGS, spellings: replies.pop().spellings }, text => Buffer.byteLength(text))[0];
 assert.ok(!typoResult.issues.some(issue => issue.type === 'spell'));
 for (const word of ['학고', '구칙을', '기대됌']) assert.ok(typoResult.marks.includes(word), word);
+// 바로 뒤에 날짜가 붙은 창체 활동명은 붙여 써도 밑줄 없음 (날짜 없이 쓴 같은 꼴 오타는 계속 밑줄)
+{
+    const text = '(힐링컬러링반)(18시간) 색칠함. 생명존중및자살예방교육(2026.08.12.)에 참여함. 학고 규칙을 지킴.\n(노래가사감상반) 가사를 감상함.';
+    const marks = rcCheckAll([{ ...records[0], text }], { ...RC_DEFAULT_SETTINGS, spellings: { 힐링컬러링반: [], 생명존중및자살예방교육: [], 노래가사감상반: [], 학고: [] } }, text => text.length)[0].marks;
+    assert.deepEqual([...marks], ['학고']);
+}
 const typoHtml = rcHighlight(typo, typoResult.issues, typoResult.marks);
 assert.match(typoHtml, /<mark class="rc-mark rc-dict">학고<\/mark> <mark class="rc-mark rc-dict">구칙을<\/mark>/);
 assert.match(typoHtml, /과학고등학교/);
