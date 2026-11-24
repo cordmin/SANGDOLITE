@@ -118,4 +118,15 @@ assert.deepEqual(Object.keys(replies.pop().spellings).sort(), ['학고', '구칙
     await self.onmessage({ data: { id: 10, words: rcWrapWords(recs), exact: true } });
     assert.equal(rcResolveWraps(recs, new Set(replies.pop().known))[0].text, '활용한 얼티미트 수업. 중학생이 된 후. 바른 자세로 가창함. 활동지에 적음. 인사이드 킥 등 기초. 설명하는 글.');
 }
+// 사전이 모르는 말 중 외래어('아트의'·'플라잉디스크를')는 따로 모아 '외래어' 탭에서 세고, 오타는 '맞춤법'에 남김
+{
+    const text = '팝 아트의 특징을 탐구함. 플라잉디스크를 던짐. 학고 규칙을 지킴.';
+    await self.onmessage({ data: { id: 11, words: ['아트의', '플라잉디스크를', '학고'] } });
+    const { spellings, loans } = replies.pop();
+    assert.deepEqual([...loans].sort(), ['아트의', '플라잉디스크를'].sort());
+    const r = rcCheckAll([{ ...records[0], text }], { ...RC_DEFAULT_SETTINGS, spellings, loans }, t => t.length)[0];
+    assert.deepEqual([...r.marks], ['학고']);
+    assert.deepEqual([...r.loanMarks].sort(), ['아트의', '플라잉디스크를'].sort());
+    assert.match(rcHighlight(text, [], r.marks, r.loanMarks), /<mark class="rc-mark rc-dict rc-loan">아트의<\/mark>/);
+}
 console.log('Offline Hunspell dictionary and record integration passed');

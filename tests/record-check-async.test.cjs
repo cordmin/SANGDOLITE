@@ -25,9 +25,9 @@ for (const pattern of [/async function rcRun\([^)]*\) \{[\s\S]*?\n\}/, /function
     assert.equal(context.rcChecking, true);
     assert.equal(elements['rc-loading'].hidden, false, '점검 중에는 표 가운데 로딩 표시');
     const second = context.rcRun();
-    pending[1].resolve({ latest: [] });
+    pending[1].resolve({ spellings: { latest: [] } });
     await second;
-    pending[0].resolve({ stale: [] });
+    pending[0].resolve({ spellings: { stale: [] } });
     await first;
     assert.ok('latest' in context.rcResults, '이전 점검이 늦게 끝나도 최신 결과를 덮어쓰지 않음');
     assert.equal(context.rcChecking, false);
@@ -35,7 +35,7 @@ for (const pattern of [/async function rcRun\([^)]*\) \{[\s\S]*?\n\}/, /function
 
     const removed = context.rcRun();
     context.rcRemoveFile(0);
-    pending[2].resolve({ removed: [] });
+    pending[2].resolve({ spellings: { removed: [] } });
     await removed;
     assert.equal(context.rcResults, null, '파일을 뺀 뒤 점검 결과가 되살아나지 않음');
     assert.equal(elements['rc-loading'].hidden, true, '점검 중 파일을 빼도 로딩 표시가 남지 않음');

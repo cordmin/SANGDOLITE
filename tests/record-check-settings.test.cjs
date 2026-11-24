@@ -23,7 +23,7 @@ console.log('Record check settings passed');
 // 표 머리글의 선택값으로 결과·검색을 함께 필터링함.
 context.RC_FILLER = '';
 context.getByteLength = text => text.length;
-for (const name of ['rcVisibleRows', 'rcStudentId', 'rcWhereLines', 'rcRenderResults']) {
+for (const name of ['rcHasMarks', 'rcVisibleRows', 'rcStudentId', 'rcWhereLines', 'rcRenderResults']) {
     vm.runInContext(source.match(new RegExp(`function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\n\\}`))[0], context);
 }
 // 좁은 항목 칸: '및' 앞에서 줄을 나누고 과목은 다음 줄 괄호 안에
