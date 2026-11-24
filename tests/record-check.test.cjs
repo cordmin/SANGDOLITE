@@ -68,6 +68,15 @@ const sim = rcCheckAll([
 ], S, getByteLength);
 assert.ok(sim[0].issues.some(x => x.type === 'similar'));
 
+// 같은 문장이 여러 학생에게 있으면 '○○ 외 n명'으로 한 번만 안내함
+const many = rcCheckAll(['가', '나', '다'].map(name => ({ area: '자율·자치활동', subject: '', name, text: '학급 회의에서 의견을 조리 있게 말함.' })), S, getByteLength);
+assert.equal(many[0].issues.filter(x => x.type === 'similar').map(x => x.why).join('|'), '나 외 1명 기록에 100% 동일한 문장 또는 문단이 있어요.');
+
+// 자격증은 취득·합격 같은 말이 같은 문장에 있을 때만, UFO·DIY는 흔한 약어라 넘어감
+const forbidWhat = text => rcCheckAll([{ area: '진로활동', subject: '', name: '가', text }], S, getByteLength)[0].issues.filter(x => x.type === 'forbid').map(x => x.what).join('|');
+assert.equal(forbidWhat('필요한 능력, 학과 및 자격증 등을 조사함. UFO 신고와 DIY 만들기를 함.'), '');
+assert.equal(forbidWhat('제과 자격증을 취득함.'), '자격증');
+
 // 기록 일부의 문장·문단이 같을 때만 안내하고 해당 원문을 표시함.
 const sentence = '친구들의 의견을 존중함.';
 const paragraph = '실험 과정을 정리함. 결과를 발표함.';

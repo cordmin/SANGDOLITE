@@ -88,4 +88,13 @@ await self.onmessage({ data: { id: 6, words: ['마찰력', '마찰력을', '탄�
     '혈구', '융해', '숲속의', '기보', '운지', '조형', '음역', '가창함', '조형하였다',
     '학고', '구칙을', '기대됌', '역활을', '일일히', '깜빡햇다', '설겆이', '설레임', '염두해', '역활함'] } });
 assert.deepEqual(Object.keys(replies.pop().spellings).sort(), ['학고', '구칙을', '기대됌', '역활을', '일일히', '깜빡햇다', '설겆이', '설레임', '염두해', '역활함'].sort());
+
+// 보완 규칙이 낱말 가운데에 걸려도, 사전이 아는 낱말('탐구지에')이면 넘어가고 모르는 낱말('안됬다')은 잡음
+{
+    const text = '핵의 위치를 탐구지에 기록함. 구지 선택함. 준비가 안됬다.';
+    await self.onmessage({ data: { id: 7, words: ['탐구지에', '구지', '안됬다'] } });
+    const found = rcCheckAll([{ ...records[0], text }], { ...RC_DEFAULT_SETTINGS, spellings: replies.pop().spellings }, text => text.length)[0]
+        .issues.filter(issue => issue.type === 'spell').map(issue => issue.what).sort();
+    assert.deepEqual(found, ['구지', '됬'].sort());
+}
 console.log('Offline Hunspell dictionary and record integration passed');
