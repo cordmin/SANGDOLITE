@@ -110,4 +110,12 @@ assert.deepEqual(Object.keys(replies.pop().spellings).sort(), ['학고', '구칙
     await self.onmessage({ data: { id: 8, words: [...good, ...bad] } });
     assert.deepEqual(Object.keys(replies.pop().spellings).sort(), [...bad].sort());
 }
+// PDF 줄바꿈: 꾸미는 말 뒤 외래어·조사 뒤 '된'·'등'은 띄우고, '가창함'·'활동지에'는 붙임 (생기부 엑셀과 비교해 고른 규칙)
+{
+    const { rcWrapWords, rcResolveWraps } = require('../js/record-check.js');
+    const text = '활용한⁤얼티미트 수업. 중학생이⁤된 후. 바른 자세로 가⁣창함. 활동⁣지에 적음. 인사이드 킥⁤등 기초. 설⁤명하는 글.';
+    const recs = [{ text }];
+    await self.onmessage({ data: { id: 10, words: rcWrapWords(recs), exact: true } });
+    assert.equal(rcResolveWraps(recs, new Set(replies.pop().known))[0].text, '활용한 얼티미트 수업. 중학생이 된 후. 바른 자세로 가창함. 활동지에 적음. 인사이드 킥 등 기초. 설명하는 글.');
+}
 console.log('Offline Hunspell dictionary and record integration passed');
