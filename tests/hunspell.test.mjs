@@ -13,7 +13,8 @@ assert.equal(replies[0].error, undefined);
 assert.equal(replies[0].spellings['참여함'], undefined);
 // 붙여 쓴 낱말은 나눠서 확인하고, 한 글자 꼬리로 오타가 통과하지 않음
 await self.onmessage({ data: { id: 9, words: ['과학탐구반', '분리배출', '일차방정식', '점검표를', '역활을', '일일히', '금새'] } });
-assert.deepEqual(Object.keys(replies.pop().spellings).sort(), ['금새', '역활을', '일일히'].sort());
+// '금새'는 표준국어대사전에 있는 낱말(물건값)이라 사전으로는 통과함
+assert.deepEqual(Object.keys(replies.pop().spellings).sort(), ['역활을', '일일히'].sort());
 assert.equal(replies[0].spellings['탐구함'], undefined);
 assert.ok(replies[0].spellings['깜빡햇다'].includes('깜빡했다'));
 assert.ok(replies[0].spellings['설겆이'].includes('설거지'));
@@ -58,7 +59,7 @@ vm.runInContext(core, context);
 const retired = vm.runInContext('RC_RETIRED_SPELL', context);
 assert.equal(retired.length, 26);
 await self.onmessage({ data: { id: 3, words: [...retired.map(row => row.wrong), '역활을'] } });
-for (const row of retired) assert.ok(row.wrong in replies[2].spellings, row.wrong);
+for (const row of retired) if (row.wrong !== '금새') assert.ok(row.wrong in replies[2].spellings, row.wrong);
 
 // 사전 미등록이나 그럴듯한 교정 후보만으로 정상적인 교육 활동명을 문제로 표시하지 않음.
 const normal = '장애인식개선교육 프로그램에 참여함. 학교폭력예방교육에서 민주주의적 태도를 보임. 정·부반장 선거에 참여함.';
@@ -82,8 +83,9 @@ assert.match(typoHtml, /<mark class="rc-mark rc-dict">학고<\/mark> <mark class
 assert.match(typoHtml, /과학고등학교/);
 assert.ok(!rcCheckAll([{ ...records[0], text: typo }], { ...RC_DEFAULT_SETTINGS, off: ['spell'], spellings: { 학고: [] } }, text => text.length)[0].marks.length, '맞춤법 점검을 끄면 밑줄도 없음');
 
-// 국립국어원 명사 목록(조사 떼고)과 '~진→~지다'로 바른 말은 통과, 오타는 계속 밑줄
+// 국립국어원 명사 목록(조사 떼고·'~함' 꼴)과 '~진→~지다'로 바른 말은 통과, 오타는 계속 밑줄
 await self.onmessage({ data: { id: 6, words: ['마찰력', '마찰력을', '탄성력을', '전기력', '자기력을', '역학적', '정해진', '만들어진',
-    '학고', '구칙을', '기대됌', '역활을', '금새', '일일히', '깜빡햇다', '설겆이', '설레임'] } });
-assert.deepEqual(Object.keys(replies.pop().spellings).sort(), ['학고', '구칙을', '기대됌', '역활을', '금새', '일일히', '깜빡햇다', '설겆이', '설레임'].sort());
+    '혈구', '융해', '숲속의', '기보', '운지', '조형', '음역', '가창함', '조형하였다',
+    '학고', '구칙을', '기대됌', '역활을', '일일히', '깜빡햇다', '설겆이', '설레임', '염두해', '역활함'] } });
+assert.deepEqual(Object.keys(replies.pop().spellings).sort(), ['학고', '구칙을', '기대됌', '역활을', '일일히', '깜빡햇다', '설겆이', '설레임', '염두해', '역활함'].sort());
 console.log('Offline Hunspell dictionary and record integration passed');
