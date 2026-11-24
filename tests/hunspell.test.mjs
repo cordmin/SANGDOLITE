@@ -81,4 +81,9 @@ const typoHtml = rcHighlight(typo, typoResult.issues, typoResult.marks);
 assert.match(typoHtml, /<mark class="rc-mark rc-dict">학고<\/mark> <mark class="rc-mark rc-dict">구칙을<\/mark>/);
 assert.match(typoHtml, /과학고등학교/);
 assert.ok(!rcCheckAll([{ ...records[0], text: typo }], { ...RC_DEFAULT_SETTINGS, off: ['spell'], spellings: { 학고: [] } }, text => text.length)[0].marks.length, '맞춤법 점검을 끄면 밑줄도 없음');
+
+// 국립국어원 명사 목록(조사 떼고)과 '~진→~지다'로 바른 말은 통과, 오타는 계속 밑줄
+await self.onmessage({ data: { id: 6, words: ['마찰력', '마찰력을', '탄성력을', '전기력', '자기력을', '역학적', '정해진', '만들어진',
+    '학고', '구칙을', '기대됌', '역활을', '금새', '일일히', '깜빡햇다', '설겆이', '설레임'] } });
+assert.deepEqual(Object.keys(replies.pop().spellings).sort(), ['학고', '구칙을', '기대됌', '역활을', '금새', '일일히', '깜빡햇다', '설겆이', '설레임'].sort());
 console.log('Offline Hunspell dictionary and record integration passed');
