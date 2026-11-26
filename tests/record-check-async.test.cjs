@@ -65,8 +65,11 @@ for (const pattern of [/async function rcRun\([^)]*\) \{[\s\S]*?\n\}/, /function
     assert.equal(context.rcFiles.map(f => f.name).join(), '5반.xlsx', '이미 불러온 파일이 있으면 새 파일로 바꿈');
     assert.match(elements['toast'].textContent, /바꿔 불러왔어요/);
     context.rcParseRows = () => [];
-    context.rcLoadFail = () => {};
+    vm.runInContext(source.match(/const RC_NEIS_PATH = .*\r?\nconst RC_FORM_MSG = .*/)[0] + ' globalThis.RC_FORM_MSG = RC_FORM_MSG;', context);
+    let failMsg = '';
+    context.rcLoadFail = (name, msg) => { failMsg = msg; };
     await context.rcAddFiles([file('빈파일.xlsx')]);
+    assert.match(failMsg, /NEIS → 업무메뉴 → 학교생활기록부/, '양식이 아니면 안내 창');
     assert.equal(context.rcFiles.map(f => f.name).join(), '5반.xlsx', '새 파일을 못 읽으면 지금 파일 그대로');
     console.log('Async record checks, failure handling and stale results passed');
 })().catch(error => { console.error(error); process.exitCode = 1; });

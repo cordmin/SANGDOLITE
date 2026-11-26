@@ -317,3 +317,8 @@ console.log('NEIS excel layout passed');
     assert.ok(iss('동아리활동', '방과후학교 컴퓨터반을 수강함.').some(x => x.what === '방과후학교' && x.level === 'no'), '방과후학교 수강은 그대로 기재 불가');
 }
 console.log('NEIS club headers passed');
+
+// 나이스 양식이 아닌 엑셀('성명'·'특기사항' 머리글 없음)은 짐작해 읽지 않음 → 불러오기 실패 창
+assert.equal(rcParseRows([['이름표', '메모'], ['김하나', '아무 글이나 길게 적은 칸'], ['이두리', '다른 글']]).length, 0);
+assert.equal(rcParseRows([['번호', '성명', '점수'], [1, '김하나', 90]]).length, 0);
+console.log('non-NEIS excel rejected');
